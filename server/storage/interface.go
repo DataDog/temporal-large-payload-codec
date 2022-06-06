@@ -1,11 +1,14 @@
-package driver
+package storage
 
 import (
 	"context"
+	"errors"
 	"io"
 )
 
-type Storage interface {
+var ErrBlobNotFound = errors.New("blob not found")
+
+type Driver interface {
 	PutPayload(context.Context, *PutRequest) (*PutResponse, error)
 	GetPayload(context.Context, *GetRequest) (*GetResponse, error)
 }

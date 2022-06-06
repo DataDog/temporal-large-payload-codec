@@ -1,7 +1,8 @@
-package e2etest
+package server_test
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -11,11 +12,37 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
+	"go.temporal.io/sdk/workflow"
 
 	codec "github.com/DataDog/temporal-large-payload-codec"
-	"github.com/DataDog/temporal-large-payload-codec/internal/driver/memory"
-	"github.com/DataDog/temporal-large-payload-codec/internal/server"
+	"github.com/DataDog/temporal-large-payload-codec/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 )
+
+func Workflow(ctx workflow.Context) error {
+	var result LargePayloadActivityResponse
+	if err := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		ScheduleToCloseTimeout: time.Second * 5,
+	}), LargePayloadActivity).Get(ctx, &result); err != nil {
+		return err
+	}
+
+	if result.Data != "hello world" {
+		return fmt.Errorf("unexpected activity result: %q", result.Data)
+	}
+
+	return nil
+}
+
+type LargePayloadActivityResponse struct {
+	Data string
+}
+
+func LargePayloadActivity(ctx context.Context) (LargePayloadActivityResponse, error) {
+	return LargePayloadActivityResponse{
+		Data: "hello world",
+	}, nil
+}
 
 func TestWorker(t *testing.T) {
 	// Create test remote codec service

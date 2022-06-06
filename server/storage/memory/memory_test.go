@@ -7,9 +7,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/DataDog/temporal-large-payload-codec/internal/driver"
-	"github.com/DataDog/temporal-large-payload-codec/internal/driver/memory"
-	"github.com/DataDog/temporal-large-payload-codec/internal/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 )
 
 func TestDriver_PutPayload(t *testing.T) {
@@ -19,14 +18,14 @@ func TestDriver_PutPayload(t *testing.T) {
 	)
 
 	// Get missing payload
-	_, err := d.GetPayload(ctx, &driver.GetRequest{Digest: "sha256:foobar"})
-	if !errors.Is(err, server.ErrBlobNotFound) {
-		t.Errorf("expected error %q, got %q", server.ErrBlobNotFound, err)
+	_, err := d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:foobar"})
+	if !errors.Is(err, storage.ErrBlobNotFound) {
+		t.Errorf("expected error %q, got %q", storage.ErrBlobNotFound, err)
 	}
 
 	// Put a payload
 	testPayloadBytes := []byte("hello world")
-	if _, err := d.PutPayload(ctx, &driver.PutRequest{
+	if _, err := d.PutPayload(ctx, &storage.PutRequest{
 		Payload:       bytes.NewReader(testPayloadBytes),
 		Digest:        "sha256:test",
 		ContentLength: uint64(len(testPayloadBytes)),
@@ -35,7 +34,7 @@ func TestDriver_PutPayload(t *testing.T) {
 	}
 
 	// Get the payload back out and compare to original bytes
-	getResp, err := d.GetPayload(ctx, &driver.GetRequest{Digest: "sha256:test"})
+	getResp, err := d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:test"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,11 +6,10 @@ import (
 	"io"
 	"sync"
 
-	"github.com/DataDog/temporal-large-payload-codec/internal/driver"
-	"github.com/DataDog/temporal-large-payload-codec/internal/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
-var _ driver.Storage = &Driver{}
+var _ storage.Driver = &Driver{}
 
 type Driver struct {
 	mux sync.RWMutex
@@ -18,7 +17,7 @@ type Driver struct {
 	blobs map[string][]byte
 }
 
-func (d *Driver) PutPayload(ctx context.Context, request *driver.PutRequest) (*driver.PutResponse, error) {
+func (d *Driver) PutPayload(ctx context.Context, request *storage.PutRequest) (*storage.PutResponse, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
@@ -32,20 +31,20 @@ func (d *Driver) PutPayload(ctx context.Context, request *driver.PutRequest) (*d
 	}
 	d.blobs[request.Digest] = b
 
-	return &driver.PutResponse{
+	return &storage.PutResponse{
 		Location: request.Digest,
 	}, nil
 }
 
-func (d *Driver) GetPayload(ctx context.Context, request *driver.GetRequest) (*driver.GetResponse, error) {
+func (d *Driver) GetPayload(ctx context.Context, request *storage.GetRequest) (*storage.GetResponse, error) {
 	d.mux.RLock()
 	defer d.mux.RUnlock()
 
 	if b, ok := d.blobs[request.Digest]; ok {
-		return &driver.GetResponse{
+		return &storage.GetResponse{
 			Data: io.NopCloser(bytes.NewReader(b)),
 		}, nil
 	}
 
-	return nil, server.ErrBlobNotFound
+	return nil, storage.ErrBlobNotFound
 }

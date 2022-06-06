@@ -10,8 +10,8 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 
 	codec "github.com/DataDog/temporal-large-payload-codec"
-	"github.com/DataDog/temporal-large-payload-codec/internal/driver/memory"
-	"github.com/DataDog/temporal-large-payload-codec/internal/server"
+	"github.com/DataDog/temporal-large-payload-codec/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 )
 
 func TestCodec(t *testing.T) {

@@ -2,29 +2,39 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
-	"github.com/DataDog/temporal-large-payload-codec/internal/driver"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
-var ErrBlobNotFound = errors.New("blob not found")
+func NewHttpHandler(driver storage.Driver) http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/v1/", newV1Handler(driver))
+	return mux
+}
 
-func NewHttpHandler(driver driver.Storage) http.Handler {
+func newV1Handler(driver storage.Driver) http.Handler {
 	r := http.NewServeMux()
 	handler := &blobHandler{driver}
 
-	r.HandleFunc("/blobs/upload", handler.putBlob)
-	r.HandleFunc("/blobs/get", handler.getBlob)
+	r.HandleFunc("/v1/health/head", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodHead {
+			handleError(w, fmt.Errorf("incorrect http method: expected HEAD"), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	r.HandleFunc("/v1/blobs/upload", handler.putBlob)
+	r.HandleFunc("/v1/blobs/get", handler.getBlob)
 
 	return r
 }
 
 type blobHandler struct {
-	driver driver.Storage
+	driver storage.Driver
 }
 
 func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +52,7 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := b.driver.GetPayload(r.Context(), &driver.GetRequest{Digest: digest})
+	resp, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest})
 	if err != nil {
 		handleError(w, err, http.StatusInternalServerError)
 		return
@@ -73,7 +83,7 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := b.driver.PutPayload(r.Context(), &driver.PutRequest{
+	result, err := b.driver.PutPayload(r.Context(), &storage.PutRequest{
 		Payload:       r.Body,
 		Digest:        digest,
 		ContentLength: length,
