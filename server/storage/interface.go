@@ -29,5 +29,6 @@ type GetRequest struct {
 }
 
 type GetResponse struct {
-	Data io.ReadCloser
+	ContentLength uint64
+	Data          io.ReadCloser
 }

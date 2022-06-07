@@ -42,7 +42,8 @@ func (d *Driver) GetPayload(ctx context.Context, request *storage.GetRequest) (*
 
 	if b, ok := d.blobs[request.Digest]; ok {
 		return &storage.GetResponse{
-			Data: io.NopCloser(bytes.NewReader(b)),
+			Data:          io.NopCloser(bytes.NewReader(b)),
+			ContentLength: uint64(len(b)),
 		}, nil
 	}
 

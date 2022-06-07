@@ -3,7 +3,10 @@ package s3
 import (
 	"context"
 	"fmt"
+	"strconv"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -34,21 +37,20 @@ type Driver struct {
 	storageClass      string
 }
 
-func (d *Driver) GetPayload(ctx context.Context, request *storage.GetRequest) (*storage.GetResponse, error) {
+func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (d *Driver) PutPayload(ctx context.Context, request *storage.PutRequest) (*storage.PutResponse, error) {
+func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
 	result, err := d.uploader.UploadWithContext(ctx, &s3manager.UploadInput{
-		Key:                       computeKey(request.Digest),
+		Key:                       aws.String(computeKey(r.Digest)),
 		Metadata:                  nil,
-		Body:                      request.Payload,
+		Body:                      r.Payload,
 		Bucket:                    &d.bucket,
-		ACL:                       nil,
 		CacheControl:              nil,
 		ChecksumAlgorithm:         &d.checksumAlgorithm,
-		ChecksumSHA256:            &request.Digest,
+		ChecksumSHA256:            &r.Digest,
 		ContentDisposition:        nil,
 		ContentEncoding:           nil,
 		ContentType:               nil,
@@ -62,7 +64,9 @@ func (d *Driver) PutPayload(ctx context.Context, request *storage.PutRequest) (*
 		ObjectLockRetainUntilDate: nil,
 		StorageClass:              &d.storageClass,
 		Tagging:                   nil,
-	})
+	}, s3manager.WithUploaderRequestOptions(request.WithSetRequestHeaders(map[string]string{
+		"Content-Length": strconv.Itoa(int(r.ContentLength)),
+	})))
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +76,6 @@ func (d *Driver) PutPayload(ctx context.Context, request *storage.PutRequest) (*
 	}, nil
 }
 
-func computeKey(digest string) *string {
-	result := fmt.Sprintf("blobs/%s", digest)
-	return &result
+func computeKey(digest string) string {
+	return fmt.Sprintf("blobs/%s", digest)
 }

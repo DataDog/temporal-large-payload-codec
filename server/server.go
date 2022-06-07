@@ -18,7 +18,10 @@ func NewHttpHandler(driver storage.Driver) http.Handler {
 
 func newV1Handler(driver storage.Driver) http.Handler {
 	r := http.NewServeMux()
-	handler := &blobHandler{driver}
+	handler := &blobHandler{
+		driver,
+		1024 * 1024 * 1024, // 1 GB
+	}
 
 	r.HandleFunc("/v1/health/head", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodHead {
@@ -34,7 +37,8 @@ func newV1Handler(driver storage.Driver) http.Handler {
 }
 
 type blobHandler struct {
-	driver storage.Driver
+	driver       storage.Driver
+	maxBlobBytes uint64
 }
 
 func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +62,7 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", resp.ContentLength))
 	if _, err := io.Copy(w, resp.Data); err != nil {
 		panic(err)
 	}
@@ -77,9 +82,18 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
 		return
 	}
-	length, err := strconv.ParseUint(r.Header.Get("Content-Length"), 10, 64)
+	contentLength := r.Header.Get("Content-Length")
+	if contentLength == "" {
+		handleError(w, nil, http.StatusLengthRequired)
+		return
+	}
+	length, err := strconv.ParseUint(contentLength, 10, 64)
 	if err != nil {
 		handleError(w, err, http.StatusBadRequest)
+		return
+	}
+	if length > b.maxBlobBytes {
+		handleError(w, fmt.Errorf("payload exceeds max size of %d bytes", b.maxBlobBytes), http.StatusRequestEntityTooLarge)
 		return
 	}
 
@@ -102,8 +116,8 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 
 func handleError(w http.ResponseWriter, err error, statusCode int) {
 	w.WriteHeader(statusCode)
-	if _, err := w.Write([]byte(err.Error())); err != nil {
-		panic(err)
+	if err != nil {
+		_, _ = w.Write([]byte(err.Error()))
 	}
 	return
 }

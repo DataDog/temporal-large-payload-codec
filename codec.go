@@ -189,8 +189,6 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	}
 	req.URL.Path = path.Join(req.URL.Path, "blobs/upload")
 
-	fmt.Println(req.URL.String())
-
 	sha2 := sha256.New()
 	sha2.Write(payload.GetData())
 	digest := "sha256:" + hex.EncodeToString(sha2.Sum(nil))
@@ -199,6 +197,7 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	q.Set("digest", digest)
 	req.URL.RawQuery = q.Encode()
 	req.Header.Set("Content-Type", "application/octet-stream")
+	req.ContentLength = int64(len(payload.GetData()))
 
 	resp, err := c.client.Do(req)
 	if err != nil {
