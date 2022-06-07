@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -62,7 +63,7 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", resp.ContentLength))
+	w.Header().Set("Content-Length", strconv.FormatUint(resp.ContentLength, 10))
 	if _, err := io.Copy(w, resp.Data); err != nil {
 		panic(err)
 	}
@@ -82,25 +83,37 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
 		return
 	}
-	contentLength := r.Header.Get("Content-Length")
-	if contentLength == "" {
+	contentLengthHeader := r.Header.Get("Content-Length")
+	if contentLengthHeader == "" {
 		handleError(w, nil, http.StatusLengthRequired)
 		return
 	}
-	length, err := strconv.ParseUint(contentLength, 10, 64)
+	contentLength, err := strconv.ParseUint(contentLengthHeader, 10, 64)
 	if err != nil {
 		handleError(w, err, http.StatusBadRequest)
 		return
 	}
-	if length > b.maxBlobBytes {
+	if contentLength > b.maxBlobBytes {
 		handleError(w, fmt.Errorf("payload exceeds max size of %d bytes", b.maxBlobBytes), http.StatusRequestEntityTooLarge)
 		return
 	}
 
+	rawMetadata, err := base64.StdEncoding.DecodeString(r.Header.Get("X-Temporal-Metadata"))
+	if err != nil {
+		handleError(w, err, http.StatusBadRequest)
+		return
+	}
+	var metadata map[string][]byte
+	if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
+		handleError(w, err, http.StatusBadRequest)
+		return
+	}
+
 	result, err := b.driver.PutPayload(r.Context(), &storage.PutRequest{
-		Payload:       r.Body,
+		Metadata:      metadata,
+		Data:          r.Body,
 		Digest:        digest,
-		ContentLength: length,
+		ContentLength: contentLength,
 	})
 	if err != nil {
 		handleError(w, err, http.StatusInternalServerError)

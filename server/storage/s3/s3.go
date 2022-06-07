@@ -46,7 +46,7 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 	result, err := d.uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Key:                       aws.String(computeKey(r.Digest)),
 		Metadata:                  nil,
-		Body:                      r.Payload,
+		Body:                      r.Data,
 		Bucket:                    &d.bucket,
 		CacheControl:              nil,
 		ChecksumAlgorithm:         &d.checksumAlgorithm,
@@ -65,7 +65,7 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 		StorageClass:              &d.storageClass,
 		Tagging:                   nil,
 	}, s3manager.WithUploaderRequestOptions(request.WithSetRequestHeaders(map[string]string{
-		"Content-Length": strconv.Itoa(int(r.ContentLength)),
+		"Content-Length": strconv.FormatUint(r.ContentLength, 10),
 	})))
 	if err != nil {
 		return nil, err

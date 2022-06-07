@@ -26,7 +26,7 @@ func TestDriver_PutPayload(t *testing.T) {
 	// Put a payload
 	testPayloadBytes := []byte("hello world")
 	if _, err := d.PutPayload(ctx, &storage.PutRequest{
-		Payload:       bytes.NewReader(testPayloadBytes),
+		Data:          bytes.NewReader(testPayloadBytes),
 		Digest:        "sha256:test",
 		ContentLength: uint64(len(testPayloadBytes)),
 	}); err != nil {

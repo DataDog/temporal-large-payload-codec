@@ -14,7 +14,8 @@ type Driver interface {
 }
 
 type PutRequest struct {
-	Payload       io.Reader
+	Metadata      map[string][]byte
+	Data          io.Reader
 	Digest        string
 	ContentLength uint64
 }

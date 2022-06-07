@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -198,6 +200,13 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	req.URL.RawQuery = q.Encode()
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.ContentLength = int64(len(payload.GetData()))
+
+	// Set metadata header
+	md, err := json.Marshal(payload.GetMetadata())
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Temporal-Metadata", base64.StdEncoding.EncodeToString(md))
 
 	resp, err := c.client.Do(req)
 	if err != nil {

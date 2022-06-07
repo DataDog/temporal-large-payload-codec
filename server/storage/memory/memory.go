@@ -17,11 +17,11 @@ type Driver struct {
 	blobs map[string][]byte
 }
 
-func (d *Driver) PutPayload(ctx context.Context, request *storage.PutRequest) (*storage.PutResponse, error) {
+func (d *Driver) PutPayload(_ context.Context, request *storage.PutRequest) (*storage.PutResponse, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	b, err := io.ReadAll(request.Payload)
+	b, err := io.ReadAll(request.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (d *Driver) PutPayload(ctx context.Context, request *storage.PutRequest) (*
 	}, nil
 }
 
-func (d *Driver) GetPayload(ctx context.Context, request *storage.GetRequest) (*storage.GetResponse, error) {
+func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) (*storage.GetResponse, error) {
 	d.mux.RLock()
 	defer d.mux.RUnlock()
 
