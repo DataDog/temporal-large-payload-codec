@@ -25,7 +25,7 @@ func newV1Handler(driver storage.Driver) http.Handler {
 
 	r.HandleFunc("/v1/health/head", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodHead {
-			handleError(w, fmt.Errorf("incorrect http method: expected HEAD"), http.StatusBadRequest)
+			handleError(w, nil, http.StatusMethodNotAllowed)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -43,7 +43,7 @@ type blobHandler struct {
 
 func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		handleError(w, fmt.Errorf("incorrect http method: expected GET"), http.StatusBadRequest)
+		handleError(w, nil, http.StatusMethodNotAllowed)
 		return
 	}
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/octet-stream" {
@@ -70,7 +70,7 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 
 func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
-		handleError(w, fmt.Errorf("incorrect http method: expected PUT"), http.StatusBadRequest)
+		handleError(w, nil, http.StatusMethodNotAllowed)
 		return
 	}
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/octet-stream" {
