@@ -10,7 +10,7 @@ var ErrBlobNotFound = errors.New("blob not found")
 
 type Driver interface {
 	PutPayload(context.Context, *PutRequest) (*PutResponse, error)
-	GetPayload(context.Context, *GetRequest) (*GetResponse, error)
+	GetPayload(context.Context, *GetRequest) error
 }
 
 type PutRequest struct {
@@ -27,9 +27,9 @@ type PutResponse struct {
 
 type GetRequest struct {
 	Digest string
+	Writer io.Writer
 }
 
 type GetResponse struct {
 	ContentLength uint64
-	Data          io.ReadCloser
 }

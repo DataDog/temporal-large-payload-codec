@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 
@@ -57,15 +56,16 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest})
+	//FIXME: get expected content length from request and set it as the response header
+	//w.Header().Set("Content-Length", strconv.FormatUint(resp.ContentLength, 10))
+	//if f, ok := w.(http.Flusher); ok {
+	//	f.Flush()
+	//}
+
+	err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w})
 	if err != nil {
 		handleError(w, err, http.StatusInternalServerError)
 		return
-	}
-
-	w.Header().Set("Content-Length", strconv.FormatUint(resp.ContentLength, 10))
-	if _, err := io.Copy(w, resp.Data); err != nil {
-		panic(err)
 	}
 }
 

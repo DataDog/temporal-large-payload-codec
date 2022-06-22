@@ -1,7 +1,6 @@
 package s3
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -21,11 +20,24 @@ type Config struct {
 	Bucket  string
 }
 
+// A sequentialWriterAt trivially satisfies the [io.WriterAt] interface
+// by ignoring the supplied offset and writing bytes to the wrapped w sequentially.
+// It is meant to be used with a [s3manager.Downloader] with `Concurrency` set to 1.
+type sequentialWriterAt struct {
+	w io.Writer
+}
+
+func (s *sequentialWriterAt) WriteAt(p []byte, _ int64) (n int, err error) {
+	return s.w.Write(p)
+}
+
 func New(config *Config) *Driver {
 	return &Driver{
-		client:            s3.New(config.Session),
-		uploader:          s3manager.NewUploader(config.Session),
-		downloader:        s3manager.NewDownloader(config.Session),
+		client:   s3.New(config.Session),
+		uploader: s3manager.NewUploader(config.Session),
+		downloader: s3manager.NewDownloader(config.Session, func(d *s3manager.Downloader) {
+			d.Concurrency = 1 // disable concurrent downloads so that we can write directly to the http response stream
+		}),
 		bucket:            config.Bucket,
 		checksumAlgorithm: s3.ChecksumAlgorithmSha256,
 		storageClass:      s3.StorageClassIntelligentTiering,
@@ -41,21 +53,14 @@ type Driver struct {
 	storageClass      string
 }
 
-func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
-	w := aws.NewWriteAtBuffer([]byte{}) // FIXME: buffers entire object in memory
-	n, err := d.downloader.DownloadWithContext(ctx, w, &s3.GetObjectInput{
+func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) error {
+	w := sequentialWriterAt{w: r.Writer}
+	_, err := d.downloader.DownloadWithContext(ctx, &w, &s3.GetObjectInput{
 		Bucket:       &d.bucket,
 		Key:          aws.String(computeKey(r.Digest)),
 		ChecksumMode: &d.checksumAlgorithm,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &storage.GetResponse{
-		ContentLength: uint64(n),
-		Data:          io.NopCloser(bytes.NewReader(w.Bytes())),
-	}, nil
+	return err
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
