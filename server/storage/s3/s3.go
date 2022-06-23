@@ -53,14 +53,18 @@ type Driver struct {
 	storageClass      string
 }
 
-func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) error {
+func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
 	w := sequentialWriterAt{w: r.Writer}
 	_, err := d.downloader.DownloadWithContext(ctx, &w, &s3.GetObjectInput{
 		Bucket:       &d.bucket,
 		Key:          aws.String(computeKey(r.Digest)),
 		ChecksumMode: &d.checksumAlgorithm,
 	})
-	return err
+	if err != nil {
+		return nil, err
+	} else {
+		return &storage.GetResponse{}, nil
+	}
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {

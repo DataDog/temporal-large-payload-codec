@@ -56,13 +56,20 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//FIXME: get expected content length from request and set it as the response header
-	//w.Header().Set("Content-Length", strconv.FormatUint(resp.ContentLength, 10))
-	//if f, ok := w.(http.Flusher); ok {
-	//	f.Flush()
-	//}
+	expectedLengthHeader := r.Header.Get("X-Payload-Expected-Content-Length")
+	if expectedLengthHeader == "" {
+		handleError(w, fmt.Errorf("expected content length header is required"), http.StatusBadRequest)
+	}
+	expectedLength, err := strconv.ParseUint(expectedLengthHeader, 10, 64)
+	if err != nil {
+		handleError(w, fmt.Errorf("expected content length header %s is invalid", expectedLengthHeader), http.StatusBadRequest)
+	}
+	w.Header().Set("Content-Length", strconv.FormatUint(expectedLength, 10))
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
 
-	err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w})
+	_, err = b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w})
 	if err != nil {
 		handleError(w, err, http.StatusInternalServerError)
 		return

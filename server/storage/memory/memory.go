@@ -36,14 +36,18 @@ func (d *Driver) PutPayload(_ context.Context, request *storage.PutRequest) (*st
 	}, nil
 }
 
-func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) error {
+func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) (*storage.GetResponse, error) {
 	d.mux.RLock()
 	defer d.mux.RUnlock()
 
 	if b, ok := d.blobs[request.Digest]; ok {
 		_, err := io.Copy(request.Writer, bytes.NewReader(b))
-		return err
-	} else {
-		return storage.ErrBlobNotFound
+		if err != nil {
+			return nil, err
+		} else {
+			return &storage.GetResponse{}, nil
+		}
 	}
+
+	return nil, storage.ErrBlobNotFound
 }
