@@ -12,15 +12,20 @@ import (
 )
 
 func TestDriver_PutPayload(t *testing.T) {
+	var err error
 	var (
 		ctx = context.Background()
 		d   = memory.Driver{}
+		buf = bytes.Buffer{}
 	)
 
 	// Get missing payload
-	_, err := d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:foobar"})
+	_, err = d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:foobar", Writer: &buf})
 	if !errors.Is(err, storage.ErrBlobNotFound) {
 		t.Errorf("expected error %q, got %q", storage.ErrBlobNotFound, err)
+	}
+	if buf.Len() != 0 {
+		t.Errorf("expected no bytes to be written, got %d", buf.Len())
 	}
 
 	// Put a payload
@@ -34,11 +39,11 @@ func TestDriver_PutPayload(t *testing.T) {
 	}
 
 	// Get the payload back out and compare to original bytes
-	getResp, err := d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:test"})
+	_, err = d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:test", Writer: &buf})
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := io.ReadAll(getResp.Data)
+	b, err := io.ReadAll(&buf)
 	if err != nil {
 		t.Fatal(err)
 	}

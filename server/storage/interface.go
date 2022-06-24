@@ -27,9 +27,8 @@ type PutResponse struct {
 
 type GetRequest struct {
 	Digest string
+	Writer io.Writer
 }
 
 type GetResponse struct {
-	ContentLength uint64
-	Data          io.ReadCloser
 }

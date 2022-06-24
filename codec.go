@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
@@ -276,6 +277,8 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload) (*co
 
 	// TODO: double check content type
 	req.Header.Set("Content-Type", "application/octet-stream")
+	// TODO: we temporarily need this because we aren't checking object metadata on the server
+	req.Header.Set("X-Payload-Expected-Content-Length", strconv.FormatUint(uint64(remoteP.Size), 10))
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -291,6 +294,10 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload) (*co
 	if err != nil {
 		return nil, err
 	}
+	if uint(len(b)) != remoteP.Size {
+		return nil, fmt.Errorf("wanted object of size %d, got %d", remoteP.Size, len(b))
+	}
+	// TODO: check digest as well?
 
 	return &common.Payload{
 		Metadata: remoteP.Metadata,
