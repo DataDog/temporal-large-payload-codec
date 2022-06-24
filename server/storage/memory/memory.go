@@ -41,12 +41,11 @@ func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) (*st
 	defer d.mux.RUnlock()
 
 	if b, ok := d.blobs[request.Digest]; ok {
-		_, err := io.Copy(request.Writer, bytes.NewReader(b))
-		if err != nil {
+		if _, err := io.Copy(request.Writer, bytes.NewReader(b)); err != nil {
 			return nil, err
-		} else {
-			return &storage.GetResponse{}, nil
 		}
+
+		return &storage.GetResponse{}, nil
 	}
 
 	return nil, storage.ErrBlobNotFound

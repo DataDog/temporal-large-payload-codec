@@ -62,15 +62,14 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 	}
 	expectedLength, err := strconv.ParseUint(expectedLengthHeader, 10, 64)
 	if err != nil {
-		handleError(w, fmt.Errorf("expected content length header %s is invalid", expectedLengthHeader), http.StatusBadRequest)
+		handleError(w, fmt.Errorf("expected content length header %s is invalid: %w", expectedLengthHeader, err), http.StatusBadRequest)
 	}
 	w.Header().Set("Content-Length", strconv.FormatUint(expectedLength, 10))
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
 
-	_, err = b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w})
-	if err != nil {
+	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w}); err != nil {
 		handleError(w, err, http.StatusInternalServerError)
 		return
 	}
