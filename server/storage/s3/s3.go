@@ -18,7 +18,10 @@ import (
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
-const sha256DigestName = "sha256"
+const (
+	awsDownloadChecksumMode = "ENABLED"
+	sha256DigestName        = "sha256"
+)
 
 type Config struct {
 	Session *session.Session
@@ -63,7 +66,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 	if _, err := d.downloader.DownloadWithContext(ctx, &w, &s3.GetObjectInput{
 		Bucket:       &d.bucket,
 		Key:          aws.String(computeKey(r.Digest)),
-		ChecksumMode: &d.checksumAlgorithm,
+		ChecksumMode: aws.String(awsDownloadChecksumMode),
 	}); err != nil {
 		return nil, err
 	}
