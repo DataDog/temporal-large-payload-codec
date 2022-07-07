@@ -67,11 +67,9 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Length", strconv.FormatUint(expectedLength, 10))
-	if f, ok := w.(http.Flusher); ok {
-		f.Flush()
-	}
 
 	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w}); err != nil {
+		w.Header().Del("Content-Length") // unset Content-Length on errors
 		handleError(w, err, http.StatusInternalServerError)
 		return
 	}
