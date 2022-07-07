@@ -2,9 +2,12 @@ package s3
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -14,6 +17,8 @@ import (
 
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
+
+const sha256DigestName = "sha256"
 
 type Config struct {
 	Session *session.Session
@@ -66,6 +71,11 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
+	awsDigest, err := computeAwsDigest(r.Digest)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := d.uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Key:                       aws.String(computeKey(r.Digest)),
 		Metadata:                  nil,
@@ -73,7 +83,7 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 		Bucket:                    &d.bucket,
 		CacheControl:              nil,
 		ChecksumAlgorithm:         &d.checksumAlgorithm,
-		ChecksumSHA256:            &r.Digest,
+		ChecksumSHA256:            &awsDigest,
 		ContentDisposition:        nil,
 		ContentEncoding:           nil,
 		ContentType:               nil,
@@ -97,6 +107,25 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 	return &storage.PutResponse{
 		Location: result.Location,
 	}, nil
+}
+
+// Compute a base64-encoded representation of a sha256 digest.
+// see `x-amz-checksum-sha256` in https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html
+func computeAwsDigest(digestSpec string) (string, error) {
+	tokens := strings.Split(digestSpec, ":")
+	if len(tokens) != 2 {
+		return "", fmt.Errorf("invalid incoming digest specification %s", digestSpec)
+	}
+	if tokens[0] != sha256DigestName {
+		return "", fmt.Errorf("unsupported digest type %s", digestSpec)
+	}
+
+	bytes, err := hex.DecodeString(tokens[1])
+	if err != nil {
+		return "", fmt.Errorf("invalid digest hex %s", tokens[1])
+	}
+
+	return base64.StdEncoding.EncodeToString(bytes), nil
 }
 
 func computeKey(digest string) string {
