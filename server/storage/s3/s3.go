@@ -5,15 +5,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"strconv"
-	"strings"
+	aws2 "github.com/aws/aws-sdk-go-v2/aws"
+	aws2s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	aws2s3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	aws2s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"io"
+	"strings"
 
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
@@ -24,8 +23,8 @@ const (
 )
 
 type Config struct {
-	Session *session.Session
-	Bucket  string
+	Config aws2.Config
+	Bucket string
 }
 
 // A sequentialWriterAt trivially satisfies the [io.WriterAt] interface
@@ -40,71 +39,55 @@ func (s *sequentialWriterAt) WriteAt(p []byte, _ int64) (n int, err error) {
 }
 
 func New(config *Config) *Driver {
+	cli := aws2s3.NewFromConfig(config.Config)
 	return &Driver{
-		client:   s3.New(config.Session),
-		uploader: s3manager.NewUploader(config.Session),
-		downloader: s3manager.NewDownloader(config.Session, func(d *s3manager.Downloader) {
+		client: cli,
+		uploader: aws2s3manager.NewUploader(cli, func(u *aws2s3manager.Uploader) {
+			u.Concurrency = 1 // disable concurrent uploads
+		}),
+		downloader: aws2s3manager.NewDownloader(cli, func(d *aws2s3manager.Downloader) {
 			d.Concurrency = 1 // disable concurrent downloads so that we can write directly to the http response stream
 		}),
-		bucket:            config.Bucket,
-		checksumAlgorithm: s3.ChecksumAlgorithmSha256,
-		storageClass:      s3.StorageClassIntelligentTiering,
+		bucket:       config.Bucket,
+		storageClass: aws2s3types.StorageClassIntelligentTiering,
 	}
 }
 
 type Driver struct {
-	client            *s3.S3
-	uploader          *s3manager.Uploader
-	downloader        *s3manager.Downloader
-	bucket            string
-	checksumAlgorithm string
-	storageClass      string
+	client     *aws2s3.Client
+	uploader   *aws2s3manager.Uploader
+	downloader *aws2s3manager.Downloader
+	bucket     string
+	//checksumAlgorithm string
+	storageClass aws2s3types.StorageClass
 }
 
 func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
 	w := sequentialWriterAt{w: r.Writer}
-	if _, err := d.downloader.DownloadWithContext(ctx, &w, &s3.GetObjectInput{
-		Bucket:       &d.bucket,
-		Key:          aws.String(computeKey(r.Digest)),
-		ChecksumMode: aws.String(awsDownloadChecksumMode),
+	if downloadedBytes, err := d.downloader.Download(ctx, &w, &aws2s3.GetObjectInput{
+		Bucket: &d.bucket,
+		Key:    aws2.String(computeKey(r.Digest)),
 	}); err != nil {
+		log.Printf("failed GET:%v", err)
 		return nil, err
+	} else {
+		log.Printf("succeeded GET:%v", downloadedBytes)
 	}
 	return &storage.GetResponse{}, nil
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
-	awsDigest, err := computeAwsDigest(r.Digest)
+	result, err := d.uploader.Upload(ctx, &aws2s3.PutObjectInput{
+		Bucket:        &d.bucket,
+		Key:           aws2.String(computeKey(r.Digest)),
+		Body:          r.Data,
+		ContentLength: int64(r.ContentLength),
+	})
 	if err != nil {
+		log.Printf("failed PUT:%v", err)
 		return nil, err
-	}
-
-	result, err := d.uploader.UploadWithContext(ctx, &s3manager.UploadInput{
-		Key:                       aws.String(computeKey(r.Digest)),
-		Metadata:                  nil,
-		Body:                      r.Data,
-		Bucket:                    &d.bucket,
-		CacheControl:              nil,
-		ChecksumAlgorithm:         &d.checksumAlgorithm,
-		ChecksumSHA256:            &awsDigest,
-		ContentDisposition:        nil,
-		ContentEncoding:           nil,
-		ContentType:               nil,
-		ExpectedBucketOwner:       nil,
-		Expires:                   nil,
-		GrantFullControl:          nil,
-		GrantRead:                 nil,
-		GrantReadACP:              nil,
-		ObjectLockLegalHoldStatus: nil,
-		ObjectLockMode:            nil,
-		ObjectLockRetainUntilDate: nil,
-		StorageClass:              &d.storageClass,
-		Tagging:                   nil,
-	}, s3manager.WithUploaderRequestOptions(request.WithSetRequestHeaders(map[string]string{
-		"Content-Length": strconv.FormatUint(r.ContentLength, 10),
-	})))
-	if err != nil {
-		return nil, err
+	} else {
+		log.Printf("succeeded PUT:%v", result)
 	}
 
 	return &storage.PutResponse{
