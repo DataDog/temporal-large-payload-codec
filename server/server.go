@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"net/http"
 	"strconv"
 
@@ -42,6 +43,12 @@ type blobHandler struct {
 }
 
 func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	span, _ := tracer.SpanFromContext(r.Context())
+	span.SetOperationName("getBlob")
+	defer span.Finish(tracer.WithError(err))
+
 	if r.Method != http.MethodGet {
 		handleError(w, nil, http.StatusMethodNotAllowed)
 		return
@@ -76,6 +83,12 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	span, _ := tracer.SpanFromContext(r.Context())
+	span.SetOperationName("putBlob")
+	defer span.Finish(tracer.WithError(err))
+
 	if r.Method != http.MethodPut {
 		handleError(w, nil, http.StatusMethodNotAllowed)
 		return

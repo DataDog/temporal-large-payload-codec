@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
 )
 
@@ -51,27 +52,63 @@ type Driver struct {
 }
 
 func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
-	w := sequentialWriterAt{w: r.Writer}
-	if _, err := d.downloader.Download(ctx, &w, &s3.GetObjectInput{
-		Bucket: &d.bucket,
-		Key:    aws.String(computeKey(r.Digest)),
-	}); err != nil {
-		return nil, err
+	var err error
+
+	span, _ := tracer.SpanFromContext(ctx)
+	span.SetOperationName("GetPayload - S3")
+	defer span.Finish(tracer.WithError(err))
+
+	{
+		bucket, key := d.bucket, computeKey(r.Digest)
+
+		s3opSpan := tracer.StartSpan("AWS S3 GET", tracer.ChildOf(span.Context()))
+		s3opSpan.SetTag("bucket", bucket)
+		s3opSpan.SetTag("key", key)
+		defer s3opSpan.Finish(tracer.WithError(err))
+
+		w := sequentialWriterAt{w: r.Writer}
+		if downloadedByteCount, err := d.downloader.Download(ctx, &w, &s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		}); err != nil {
+			return nil, err
+		} else {
+			s3opSpan.SetTag("bytes", downloadedByteCount)
+		}
 	}
 
 	return &storage.GetResponse{}, nil
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
-	result, err := d.uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket:        &d.bucket,
-		Key:           aws.String(computeKey(r.Digest)),
-		Body:          r.Data,
-		ContentLength: int64(r.ContentLength),
-		StorageClass:  d.storageClass,
-	})
-	if err != nil {
-		return nil, err
+	var (
+		err    error
+		result *manager.UploadOutput
+	)
+
+	span, _ := tracer.SpanFromContext(ctx)
+	span.SetOperationName("PutPayload - S3")
+	defer span.Finish(tracer.WithError(err))
+
+	{
+		bucket, key := d.bucket, computeKey(r.Digest)
+
+		s3opSpan := tracer.StartSpan("AWS S3 PUT", tracer.ChildOf(span.Context()))
+		s3opSpan.SetTag("bucket", bucket)
+		s3opSpan.SetTag("key", key)
+		defer s3opSpan.Finish(tracer.WithError(err))
+
+		result, err = d.uploader.Upload(ctx, &s3.PutObjectInput{
+			Bucket:        aws.String(bucket),
+			Key:           aws.String(key),
+			Body:          r.Data,
+			ContentLength: int64(r.ContentLength),
+			StorageClass:  d.storageClass,
+		})
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &storage.PutResponse{

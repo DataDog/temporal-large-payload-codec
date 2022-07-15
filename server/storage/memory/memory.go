@@ -3,6 +3,7 @@ package memory
 import (
 	"bytes"
 	"context"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
 	"sync"
 
@@ -17,7 +18,13 @@ type Driver struct {
 	blobs map[string][]byte
 }
 
-func (d *Driver) PutPayload(_ context.Context, request *storage.PutRequest) (*storage.PutResponse, error) {
+func (d *Driver) PutPayload(ctx context.Context, request *storage.PutRequest) (*storage.PutResponse, error) {
+	var err error
+
+	span, _ := tracer.SpanFromContext(ctx)
+	span.SetOperationName("PutPayload - Memory")
+	defer span.Finish(tracer.WithError(err))
+
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
@@ -36,7 +43,13 @@ func (d *Driver) PutPayload(_ context.Context, request *storage.PutRequest) (*st
 	}, nil
 }
 
-func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) (*storage.GetResponse, error) {
+func (d *Driver) GetPayload(ctx context.Context, request *storage.GetRequest) (*storage.GetResponse, error) {
+	var err error
+
+	span, _ := tracer.SpanFromContext(ctx)
+	span.SetOperationName("GetPayload - Memory")
+	defer span.Finish(tracer.WithError(err))
+
 	d.mux.RLock()
 	defer d.mux.RUnlock()
 
