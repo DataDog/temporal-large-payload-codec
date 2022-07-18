@@ -126,8 +126,8 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Location", result.Location)
+	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		return
 	}
