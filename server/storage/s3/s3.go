@@ -52,14 +52,17 @@ type Driver struct {
 
 func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
 	w := sequentialWriterAt{w: r.Writer}
-	if _, err := d.downloader.Download(ctx, &w, &s3.GetObjectInput{
+	numBytes, err := d.downloader.Download(ctx, &w, &s3.GetObjectInput{
 		Bucket: &d.bucket,
 		Key:    aws.String(computeKey(r.Digest)),
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	return &storage.GetResponse{}, nil
+	return &storage.GetResponse{
+		ContentLength: uint64(numBytes),
+	}, nil
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {

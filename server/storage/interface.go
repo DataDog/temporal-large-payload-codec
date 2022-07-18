@@ -31,4 +31,5 @@ type GetRequest struct {
 }
 
 type GetResponse struct {
+	ContentLength uint64
 }
