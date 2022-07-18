@@ -108,6 +108,8 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 
 		if err != nil {
 			return nil, err
+		} else {
+			s3opSpan.SetTag("bytes", r.ContentLength)
 		}
 	}
 
