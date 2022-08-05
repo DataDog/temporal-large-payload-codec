@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/DataDog/temporal-large-payload-codec/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/s3"
 )
 
@@ -29,14 +30,15 @@ func main() {
 
 	flag.Parse()
 
-	driver, err := createDriver(*driverName)
+	ctx := context.Background()
+	driver, err := createDriver(ctx, *driverName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	validatable, ok := driver.(storage.Validatable)
 	if ok {
-		err := validatable.Validate(context.Background())
+		err := validatable.Validate(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -50,7 +52,7 @@ func main() {
 	}
 }
 
-func createDriver(driverName string) (storage.Driver, error) {
+func createDriver(ctx context.Context, driverName string) (storage.Driver, error) {
 	var driver storage.Driver
 
 	normalizedDriverName := strings.ToLower(driverName)
@@ -69,7 +71,7 @@ func createDriver(driverName string) (storage.Driver, error) {
 			return nil, errors.New("BUCKET environment variable not set")
 		}
 
-		cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
+		cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 		if err != nil {
 			return nil, err
 		}
@@ -78,6 +80,13 @@ func createDriver(driverName string) (storage.Driver, error) {
 			Config: cfg,
 			Bucket: bucket,
 		})
+	case "gcs":
+		log.Printf("creating %s driver", driverName)
+		bucket, set := os.LookupEnv("BUCKET")
+		if !set {
+			log.Fatal("BUCKET environment variable not set")
+		}
+		driver = gcs.New(ctx, bucket)
 	default:
 		return nil, errors.Errorf("unkown driver '%s'", driverName)
 	}
