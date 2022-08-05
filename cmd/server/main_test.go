@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/s3"
 	"os"
@@ -55,12 +57,20 @@ func TestCreateDriver(t *testing.T) {
 			expectedDriver: &s3.Driver{},
 			expectError:    false,
 		},
+		{
+			description:    "gcs driver",
+			testEnv:        map[string]string{"BUCKET": "my-bucket"},
+			driverName:     "gcs",
+			expectedDriver: &gcs.Driver{},
+			expectError:    false,
+		},
 	} {
 		t.Run(scenario.description, func(t *testing.T) {
+			ctx := context.Background()
 			envCleaner := envSetter(scenario.testEnv)
 			t.Cleanup(envCleaner)
 
-			driver, err := createDriver(scenario.driverName)
+			driver, err := createDriver(ctx, scenario.driverName)
 			if scenario.expectError {
 				require.Error(t, err)
 			} else {
