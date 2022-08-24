@@ -190,7 +190,7 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	if err != nil {
 		return nil, err
 	}
-	req.URL.Path = path.Join(req.URL.Path, "blobs/upload")
+	req.URL.Path = path.Join(req.URL.Path, "blobs/put")
 
 	sha2 := sha256.New()
 	sha2.Write(payload.GetData())
