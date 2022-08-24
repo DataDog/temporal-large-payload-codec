@@ -57,9 +57,9 @@ func main() {
     if !set {
         log.Fatal("AWS_REGION environment variable not set")
     }
-    bucket, set := os.LookupEnv("S3_BUCKET")
+    bucket, set := os.LookupEnv("BUCKET")
     if !set {
-        log.Fatal("S3_BUCKET environment variable not set")
+        log.Fatal("BUCKET environment variable not set")
     }
 
     cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))

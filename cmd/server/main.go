@@ -2,8 +2,15 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
+	"github.com/pkg/errors"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 
@@ -12,18 +19,55 @@ import (
 )
 
 func main() {
-	cfg, err := config.LoadDefaultConfig(
-		context.Background(),
-		config.WithRegion("YOUR_REGION_HERE"),
-		config.WithSharedConfigProfile("YOUR_PROFILE_HERE"),
-	)
+	driverName := flag.String("driver", "memory", "name of the storage driver [memory|s3]")
+	port := flag.Int("port", 8577, "server port")
+
+	flag.Parse()
+
+	driver, err := createDriver(*driverName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := http.ListenAndServe(":8577", server.NewHttpHandler(s3.New(&s3.Config{
-		Config: cfg,
-		Bucket: "YOUR_BUCKET_HERE",
-	}))); err != nil {
+
+	httpHandler := server.NewHttpHandler(driver)
+
+	log.Printf("starting server on port %d", *port)
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", *port), httpHandler); err != nil {
 		log.Fatal(err)
 	}
+
+}
+
+func createDriver(driverName string) (storage.Driver, error) {
+	var driver storage.Driver
+
+	normalizedDriverName := strings.ToLower(driverName)
+	switch normalizedDriverName {
+	case "memory":
+		log.Printf("creating %s driver", driverName)
+		driver = &memory.Driver{}
+	case "s3":
+		log.Printf("creating %s driver", driverName)
+		region, set := os.LookupEnv("AWS_REGION")
+		if !set {
+			return nil, errors.New("AWS_REGION environment variable not set")
+		}
+		bucket, set := os.LookupEnv("BUCKET")
+		if !set {
+			return nil, errors.New("BUCKET environment variable not set")
+		}
+
+		cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(region))
+		if err != nil {
+			return nil, err
+		}
+
+		driver = s3.New(&s3.Config{
+			Config: cfg,
+			Bucket: bucket,
+		})
+	default:
+		return nil, errors.Errorf("unkown driver '%s'", driverName)
+	}
+	return driver, nil
 }
