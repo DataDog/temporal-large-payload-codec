@@ -30,7 +30,7 @@ func newV1Handler(driver storage.Driver) http.Handler {
 		}
 		w.WriteHeader(http.StatusOK)
 	})
-	r.HandleFunc("/v1/blobs/upload", handler.putBlob)
+	r.HandleFunc("/v1/blobs/put", handler.putBlob)
 	r.HandleFunc("/v1/blobs/get", handler.getBlob)
 
 	return r
