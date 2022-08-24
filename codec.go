@@ -69,11 +69,11 @@ func WithURL(url string) Option {
 // below the cutoff, then we can calculate how many events total would fit in
 // one workflow's history (the point before which we must call ContinueAsNew):
 //
-//   AverageNonUserTaskBytes = 1024 (generous estimate for events like WorkflowTaskScheduled)
-//   CodecMinBytes = 128_000
-//   AverageEventBytes = (AverageNonUserTaskBytes * 3 + CodecMinBytes) / 4 = 32_768
-//   MaxHistoryEventBytes = 50_000_000
-//   MaxHistoryEventCount = MaxHistoryEventBytes / AverageEventBytes = 1525
+//	AverageNonUserTaskBytes = 1024 (generous estimate for events like WorkflowTaskScheduled)
+//	CodecMinBytes = 128_000
+//	AverageEventBytes = (AverageNonUserTaskBytes * 3 + CodecMinBytes) / 4 = 32_768
+//	MaxHistoryEventBytes = 50_000_000
+//	MaxHistoryEventCount = MaxHistoryEventBytes / AverageEventBytes = 1525
 func WithMinBytes(bytes uint32) Option {
 	return applier(func(c *Codec) error {
 		c.minBytes = int(bytes)
