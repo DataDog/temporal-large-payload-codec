@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/DataDog/temporal-large-payload-codec/logging"
 	"net/http"
 	"strconv"
 
@@ -12,20 +13,27 @@ import (
 
 func NewHttpHandler(driver storage.Driver) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/v1/", newV1Handler(driver))
+	mux.Handle("/v1/", newV1Handler(driver, logging.NewNoopLogger()))
 	return mux
 }
 
-func newV1Handler(driver storage.Driver) http.Handler {
+func NewHttpHandlerWithLogger(driver storage.Driver, logger logging.Logger) http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/v1/", newV1Handler(driver, logger))
+	return mux
+}
+
+func newV1Handler(driver storage.Driver, logger logging.Logger) http.Handler {
 	r := http.NewServeMux()
 	handler := &blobHandler{
 		driver,
 		1024 * 1024 * 1024, // 1 GB
+		logger,
 	}
 
 	r.HandleFunc("/v1/health/head", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodHead {
-			handleError(w, nil, http.StatusMethodNotAllowed)
+			handler.handleError(w, nil, http.StatusMethodNotAllowed)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -39,79 +47,80 @@ func newV1Handler(driver storage.Driver) http.Handler {
 type blobHandler struct {
 	driver       storage.Driver
 	maxBlobBytes uint64
+	logger       logging.Logger
 }
 
 func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		handleError(w, nil, http.StatusMethodNotAllowed)
+		b.handleError(w, nil, http.StatusMethodNotAllowed)
 		return
 	}
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/octet-stream" {
-		handleError(w, fmt.Errorf("missing or incorrect Content-Type header"), http.StatusBadRequest)
+		b.handleError(w, fmt.Errorf("missing or incorrect Content-Type header"), http.StatusBadRequest)
 		return
 	}
 	digest := r.URL.Query().Get("digest")
 	if digest == "" {
-		handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
+		b.handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
 		return
 	}
 
 	expectedLengthHeader := r.Header.Get("X-Payload-Expected-Content-Length")
 	if expectedLengthHeader == "" {
-		handleError(w, fmt.Errorf("expected content length header is required"), http.StatusBadRequest)
+		b.handleError(w, fmt.Errorf("expected content length header is required"), http.StatusBadRequest)
 		return
 	}
 	expectedLength, err := strconv.ParseUint(expectedLengthHeader, 10, 64)
 	if err != nil {
-		handleError(w, fmt.Errorf("expected content length header %s is invalid: %w", expectedLengthHeader, err), http.StatusBadRequest)
+		b.handleError(w, fmt.Errorf("expected content length header %s is invalid: %w", expectedLengthHeader, err), http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Length", strconv.FormatUint(expectedLength, 10))
 
 	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w}); err != nil {
 		w.Header().Del("Content-Length") // unset Content-Length on errors
-		handleError(w, err, http.StatusInternalServerError)
+		b.handleError(w, err, http.StatusInternalServerError)
 		return
 	}
 }
 
 func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
-		handleError(w, nil, http.StatusMethodNotAllowed)
+		b.handleError(w, nil, http.StatusMethodNotAllowed)
 		return
 	}
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/octet-stream" {
-		handleError(w, fmt.Errorf("missing or incorrect Content-Type header"), http.StatusBadRequest)
+		b.handleError(w, fmt.Errorf("missing or incorrect Content-Type header"), http.StatusBadRequest)
 		return
 	}
 	digest := r.URL.Query().Get("digest")
 	if digest == "" {
-		handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
+		b.handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
 		return
 	}
 	contentLengthHeader := r.Header.Get("Content-Length")
 	if contentLengthHeader == "" {
-		handleError(w, nil, http.StatusLengthRequired)
+		b.handleError(w, nil, http.StatusLengthRequired)
 		return
 	}
 	contentLength, err := strconv.ParseUint(contentLengthHeader, 10, 64)
 	if err != nil {
-		handleError(w, err, http.StatusBadRequest)
+		b.handleError(w, err, http.StatusBadRequest)
 		return
 	}
 	if contentLength > b.maxBlobBytes {
-		handleError(w, fmt.Errorf("payload exceeds max size of %d bytes", b.maxBlobBytes), http.StatusRequestEntityTooLarge)
+		b.handleError(w, fmt.Errorf("payload exceeds max size of %d bytes", b.maxBlobBytes), http.StatusRequestEntityTooLarge)
 		return
 	}
 
 	rawMetadata, err := base64.StdEncoding.DecodeString(r.Header.Get("X-Temporal-Metadata"))
 	if err != nil {
-		handleError(w, err, http.StatusBadRequest)
+		b.handleError(w, err, http.StatusBadRequest)
 		return
 	}
 	var metadata map[string][]byte
 	if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
-		handleError(w, err, http.StatusBadRequest)
+		b.handleError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -122,7 +131,7 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		ContentLength: contentLength,
 	})
 	if err != nil {
-		handleError(w, err, http.StatusInternalServerError)
+		b.handleError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -133,7 +142,8 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleError(w http.ResponseWriter, err error, statusCode int) {
+func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode int) {
+	b.logger.Error(err.Error())
 	w.WriteHeader(statusCode)
 	if err != nil {
 		_, _ = w.Write([]byte(err.Error()))
