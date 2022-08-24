@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/DataDog/temporal-large-payload-codec/logging"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 	"github.com/pkg/errors"
@@ -18,6 +19,10 @@ import (
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/s3"
 )
 
+var (
+	logger = logging.NewBuiltinLogger()
+)
+
 func main() {
 	driverName := flag.String("driver", "memory", "name of the storage driver [memory|s3]")
 	port := flag.Int("port", 8577, "server port")
@@ -29,13 +34,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	httpHandler := server.NewHttpHandler(driver)
+	httpHandler := server.NewHttpHandlerWithLogger(driver, logger)
 
-	log.Printf("starting server on port %d", *port)
+	logger.Info(fmt.Sprintf("starting server on port %d", *port))
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *port), httpHandler); err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 func createDriver(driverName string) (storage.Driver, error) {
@@ -44,10 +48,10 @@ func createDriver(driverName string) (storage.Driver, error) {
 	normalizedDriverName := strings.ToLower(driverName)
 	switch normalizedDriverName {
 	case "memory":
-		log.Printf("creating %s driver", driverName)
+		logger.Info(fmt.Sprintf("creating %s driver", driverName))
 		driver = &memory.Driver{}
 	case "s3":
-		log.Printf("creating %s driver", driverName)
+		logger.Info(fmt.Sprintf("creating %s driver", driverName))
 		region, set := os.LookupEnv("AWS_REGION")
 		if !set {
 			return nil, errors.New("AWS_REGION environment variable not set")
