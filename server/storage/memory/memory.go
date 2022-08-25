@@ -50,5 +50,5 @@ func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) (*st
 		}, nil
 	}
 
-	return nil, storage.ErrBlobNotFound
+	return nil, &storage.ErrBlobNotFound{}
 }

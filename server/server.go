@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/DataDog/temporal-large-payload-codec/logging"
 	"net/http"
@@ -79,8 +80,13 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w}); err != nil {
 		w.Header().Del("Content-Length") // unset Content-Length on errors
-		b.handleError(w, err, http.StatusInternalServerError)
-		return
+
+		var blobNotFound *storage.ErrBlobNotFound
+		if errors.As(err, &blobNotFound) {
+			b.handleError(w, err, http.StatusNotFound)
+		} else {
+			b.handleError(w, err, http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -143,7 +149,9 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode int) {
-	b.logger.Error(err.Error())
+	if err != nil {
+		b.logger.Error(err.Error())
+	}
 	w.WriteHeader(statusCode)
 	if err != nil {
 		_, _ = w.Write([]byte(err.Error()))

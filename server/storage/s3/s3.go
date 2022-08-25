@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -57,6 +58,12 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 		Key:    aws.String(computeKey(r.Digest)),
 	})
 	if err != nil {
+		var nsk *s3types.NoSuchKey
+		if errors.As(err, &nsk) {
+			err = &storage.ErrBlobNotFound{
+				Err: err,
+			}
+		}
 		return nil, err
 	}
 
