@@ -2,11 +2,17 @@ package storage
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"io"
 )
 
-var ErrBlobNotFound = errors.New("blob not found")
+type ErrBlobNotFound struct {
+	Err error
+}
+
+func (m *ErrBlobNotFound) Error() string {
+	return fmt.Sprintf("blob not found: %v", m.Err)
+}
 
 type Driver interface {
 	PutPayload(context.Context, *PutRequest) (*PutResponse, error)

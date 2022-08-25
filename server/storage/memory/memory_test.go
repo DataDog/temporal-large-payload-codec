@@ -21,8 +21,9 @@ func TestDriver_PutPayload(t *testing.T) {
 
 	// Get missing payload
 	_, err = d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:foobar", Writer: &buf})
-	if !errors.Is(err, storage.ErrBlobNotFound) {
-		t.Errorf("expected error %q, got %q", storage.ErrBlobNotFound, err)
+	var blobNotFound *storage.ErrBlobNotFound
+	if !errors.As(err, &blobNotFound) {
+		t.Errorf("expected error %q, got %q", storage.ErrBlobNotFound{}, err)
 	}
 	if buf.Len() != 0 {
 		t.Errorf("expected no bytes to be written, got %d", buf.Len())
