@@ -34,6 +34,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	validatable, ok := driver.(storage.Validatable)
+	if ok {
+		err := validatable.Validate(context.Background())
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	httpHandler := server.NewHttpHandlerWithLogger(driver, logger)
 
 	logger.Info(fmt.Sprintf("starting server on port %d", *port))
