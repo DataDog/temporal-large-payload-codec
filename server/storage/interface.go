@@ -19,6 +19,10 @@ type Driver interface {
 	GetPayload(context.Context, *GetRequest) (*GetResponse, error)
 }
 
+type Validatable interface {
+	Validate(context.Context) error
+}
+
 type PutRequest struct {
 	Metadata      map[string][]byte
 	Data          io.Reader

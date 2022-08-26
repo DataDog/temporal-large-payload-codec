@@ -89,6 +89,21 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 	}, nil
 }
 
+func (d *Driver) Validate(ctx context.Context) error {
+	result, err := d.client.ListBuckets(ctx, &s3.ListBucketsInput{})
+	if err != nil {
+		return err
+	}
+
+	for _, bucket := range result.Buckets {
+		if *bucket.Name == d.bucket {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unable to access S3 bucket '%s'", d.bucket)
+}
+
 func computeKey(digest string) string {
 	return fmt.Sprintf("blobs/%s", digest)
 }
