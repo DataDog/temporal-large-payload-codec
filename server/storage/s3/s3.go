@@ -55,7 +55,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 	w := sequentialWriterAt{w: r.Writer}
 	numBytes, err := d.downloader.Download(ctx, &w, &s3.GetObjectInput{
 		Bucket: &d.bucket,
-		Key:    aws.String(computeKey(r.Digest)),
+		Key:    aws.String(storage.ComputeKey(r.Digest)),
 	})
 	if err != nil {
 		var nsk *s3types.NoSuchKey
@@ -75,7 +75,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
 	result, err := d.uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:        &d.bucket,
-		Key:           aws.String(computeKey(r.Digest)),
+		Key:           aws.String(storage.ComputeKey(r.Digest)),
 		Body:          r.Data,
 		ContentLength: int64(r.ContentLength),
 		StorageClass:  d.storageClass,
@@ -102,8 +102,4 @@ func (d *Driver) Validate(ctx context.Context) error {
 	}
 
 	return fmt.Errorf("unable to access S3 bucket '%s'", d.bucket)
-}
-
-func computeKey(digest string) string {
-	return fmt.Sprintf("blobs/%s", digest)
 }
