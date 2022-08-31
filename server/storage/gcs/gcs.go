@@ -28,7 +28,7 @@ func New(ctx context.Context, bucket string) *Driver {
 }
 
 func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
-	rc, err := d.client.Bucket(d.bucket).Object(r.Digest).NewReader(ctx)
+	rc, err := d.client.Bucket(d.bucket).Object(storage.ComputeKey(r.Digest)).NewReader(ctx)
 	if err != nil {
 		if errors.Is(err, gcs.ErrObjectNotExist) {
 			return nil, &storage.ErrBlobNotFound{Err: err}
@@ -48,7 +48,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
-	o := d.client.Bucket(d.bucket).Object(r.Digest)
+	o := d.client.Bucket(d.bucket).Object(storage.ComputeKey(r.Digest))
 
 	// Upload an object with storage.Writer.
 	wc := o.NewWriter(ctx)
