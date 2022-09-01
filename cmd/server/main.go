@@ -84,9 +84,14 @@ func createDriver(ctx context.Context, driverName string) (storage.Driver, error
 		log.Printf("creating %s driver", driverName)
 		bucket, set := os.LookupEnv("BUCKET")
 		if !set {
-			log.Fatal("BUCKET environment variable not set")
+			return nil, errors.New("BUCKET environment variable not set")
 		}
-		driver = gcs.New(ctx, bucket)
+
+		var err error
+		driver, err = gcs.New(ctx, bucket)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, errors.Errorf("unkown driver '%s'", driverName)
 	}
