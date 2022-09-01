@@ -16,28 +16,31 @@ type Driver struct {
 	bucket string
 }
 
-func New(ctx context.Context, bucket string) *Driver {
+func New(ctx context.Context, bucket string) (*Driver, error) {
 	client, err := gcs.NewClient(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("unable to create gcs client: %w", err)
 	}
 	return &Driver{
 		client: client,
 		bucket: bucket,
-	}
+	}, nil
 }
 
 func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
-	rc, err := d.client.Bucket(d.bucket).Object(storage.ComputeKey(r.Digest)).NewReader(ctx)
+	reader, err := d.client.Bucket(d.bucket).Object(storage.ComputeKey(r.Digest)).NewReader(ctx)
 	if err != nil {
 		if errors.Is(err, gcs.ErrObjectNotExist) {
 			return nil, &storage.ErrBlobNotFound{Err: err}
 		}
 		return nil, err
 	}
-	defer rc.Close()
+	defer func() {
+		err := reader.Close()
+		log.Printf("unable to close bucket reader: %v", err)
+	}()
 
-	numBytes, err := io.Copy(r.Writer, rc)
+	numBytes, err := io.Copy(r.Writer, reader)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +51,8 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
-	o := d.client.Bucket(d.bucket).Object(storage.ComputeKey(r.Digest))
+	path := storage.ComputeKey(r.Digest)
+	o := d.client.Bucket(d.bucket).Object(path)
 
 	// Upload an object with storage.Writer.
 	wc := o.NewWriter(ctx)
@@ -59,7 +63,9 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 	if err := wc.Close(); err != nil {
 		return nil, fmt.Errorf("Writer.Close: %v", err)
 	}
-	return &storage.PutResponse{}, nil
+	return &storage.PutResponse{
+		Location: fmt.Sprintf("gs://%s/%s", d.bucket, path),
+	}, nil
 }
 
 func (d *Driver) Validate(ctx context.Context) error {
