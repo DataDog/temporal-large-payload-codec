@@ -71,7 +71,7 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 func (d *Driver) Validate(ctx context.Context) error {
 	bucketHandle := d.client.Bucket(d.bucket)
 	if _, err := bucketHandle.Attrs(ctx); err != nil {
-		return fmt.Errorf("unable to access GCS bucket '%s'", d.bucket)
+		return fmt.Errorf("unable to access GCS bucket '%s': %s", d.bucket, err)
 	}
 	return nil
 }
