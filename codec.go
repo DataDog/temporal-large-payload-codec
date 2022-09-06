@@ -8,10 +8,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
 	"net/url"
 	"path"
+	"sort"
 	"strconv"
 
 	"go.temporal.io/api/common/v1"
@@ -193,6 +195,7 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	req.URL.Path = path.Join(req.URL.Path, "blobs/put")
 
 	sha2 := sha256.New()
+	hashMetadata(sha2, payload.Metadata)
 	sha2.Write(payload.GetData())
 	digest := "sha256:" + hex.EncodeToString(sha2.Sum(nil))
 
@@ -303,4 +306,20 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload) (*co
 		Metadata: remoteP.Metadata,
 		Data:     b,
 	}, nil
+}
+
+func hashMetadata(h hash.Hash, metadata map[string][]byte) {
+	idx := 0
+	keys := make([]string, len(metadata))
+	for k := range metadata {
+		keys[idx] = k
+		idx++
+	}
+
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := metadata[k]
+		h.Write([]byte(k))
+		h.Write(v)
+	}
 }
