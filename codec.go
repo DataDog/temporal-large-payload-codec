@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	"io"
 	"net/http"
 	"net/url"
@@ -181,11 +182,16 @@ func (c *Codec) Encode(payloads []*common.Payload) ([]*common.Payload, error) {
 }
 
 func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*common.Payload, error) {
+	marshaled, err := proto.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPut,
 		c.url,
-		bytes.NewReader(payload.GetData()),
+		bytes.NewReader(marshaled),
 	)
 	if err != nil {
 		return nil, err
@@ -193,14 +199,14 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	req.URL.Path = path.Join(req.URL.Path, "blobs/put")
 
 	sha2 := sha256.New()
-	sha2.Write(payload.GetData())
+	sha2.Write(marshaled)
 	digest := "sha256:" + hex.EncodeToString(sha2.Sum(nil))
 
 	q := req.URL.Query()
 	q.Set("digest", digest)
 	req.URL.RawQuery = q.Encode()
 	req.Header.Set("Content-Type", "application/octet-stream")
-	req.ContentLength = int64(len(payload.GetData()))
+	req.ContentLength = int64(len(marshaled))
 
 	// Set metadata header
 	md, err := json.Marshal(payload.GetMetadata())
@@ -221,14 +227,14 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 
 	result, err := converter.GetDefaultDataConverter().ToPayload(remotePayload{
 		Metadata: payload.GetMetadata(),
-		Size:     uint(len(payload.GetData())),
+		Size:     uint(len(marshaled)),
 		Digest:   digest,
 		Location: resp.Header.Get("Location"),
 	})
 	if err != nil {
 		return nil, err
 	}
-	result.Metadata["temporal.io/remote-codec"] = []byte("v1")
+	result.Metadata["temporal.io/remote-codec"] = []byte("v2")
 
 	return result, nil
 }
@@ -239,7 +245,13 @@ func (c *Codec) Decode(payloads []*common.Payload) ([]*common.Payload, error) {
 		if codecVersion, ok := p.GetMetadata()["temporal.io/remote-codec"]; ok {
 			switch string(codecVersion) {
 			case "v1":
-				decodedPayload, err := c.decodePayload(context.Background(), p)
+				decodedPayload, err := c.decodePayload(context.Background(), p, false)
+				if err != nil {
+					return nil, err
+				}
+				result[i] = decodedPayload
+			case "v2":
+				decodedPayload, err := c.decodePayload(context.Background(), p, true)
 				if err != nil {
 					return nil, err
 				}
@@ -254,7 +266,7 @@ func (c *Codec) Decode(payloads []*common.Payload) ([]*common.Payload, error) {
 	return result, nil
 }
 
-func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload) (*common.Payload, error) {
+func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, containsMarshaledPayload bool) (*common.Payload, error) {
 	var remoteP remotePayload
 	if err := converter.GetDefaultDataConverter().FromPayload(payload, &remoteP); err != nil {
 		return nil, err
@@ -299,8 +311,20 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload) (*co
 	}
 	// TODO: check digest as well?
 
+	var data []byte
+	if containsMarshaledPayload {
+		var encoded common.Payload
+		err = proto.Unmarshal(b, &encoded)
+		if err != nil {
+			return nil, err
+		}
+		data = encoded.GetData()
+	} else {
+		data = b
+	}
+
 	return &common.Payload{
 		Metadata: remoteP.Metadata,
-		Data:     b,
+		Data:     data,
 	}, nil
 }
