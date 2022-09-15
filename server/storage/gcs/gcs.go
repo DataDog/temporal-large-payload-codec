@@ -36,8 +36,9 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 		return nil, err
 	}
 	defer func() {
-		err := reader.Close()
-		log.Printf("unable to close bucket reader: %v", err)
+		if err := reader.Close(); err != nil {
+			log.Printf("unable to close bucket reader: %v", err)
+		}
 	}()
 
 	numBytes, err := io.Copy(r.Writer, reader)
