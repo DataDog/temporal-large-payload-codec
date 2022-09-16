@@ -1,17 +1,26 @@
 package v2
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/DataDog/temporal-large-payload-codec/logging"
+	"hash"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
+// NewHandler creates a v2 HTTP handler for the Large Payload Service.
+//
+// Compared to v1, this version decouples the storage path from the digest/checksum.
+// It also implements checksum validation.
 func NewHandler(driver storage.Driver, logger logging.Logger) http.Handler {
 	r := http.NewServeMux()
 	handler := &blobHandler{
@@ -48,9 +57,16 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		b.handleError(w, fmt.Errorf("missing or incorrect Content-Type header"), http.StatusBadRequest)
 		return
 	}
-	digest := r.URL.Query().Get("digest")
-	if digest == "" {
-		b.handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
+
+	digestParam := r.URL.Query().Get("digest")
+	if digestParam == "" {
+		b.handleError(w, errors.New("digest query parameter is required"), http.StatusBadRequest)
+		return
+	}
+
+	_, _, err := b.digestAndHash(digestParam)
+	if err != nil {
+		b.handleError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -66,7 +82,7 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Length", strconv.FormatUint(expectedLength, 10))
 
-	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w}); err != nil {
+	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digestParam, Writer: w}); err != nil {
 		w.Header().Del("Content-Length") // unset Content-Length on errors
 
 		var blobNotFound *storage.ErrBlobNotFound
@@ -83,15 +99,24 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		b.handleError(w, nil, http.StatusMethodNotAllowed)
 		return
 	}
+
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/octet-stream" {
 		b.handleError(w, fmt.Errorf("missing or incorrect Content-Type header"), http.StatusBadRequest)
 		return
 	}
-	digest := r.URL.Query().Get("digest")
-	if digest == "" {
-		b.handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
+
+	digestParam := r.URL.Query().Get("digest")
+	if digestParam == "" {
+		b.handleError(w, errors.New("digest query parameter is required"), http.StatusBadRequest)
 		return
 	}
+
+	digest, hash, err := b.digestAndHash(digestParam)
+	if err != nil {
+		b.handleError(w, err, http.StatusBadRequest)
+		return
+	}
+
 	contentLengthHeader := r.Header.Get("Content-Length")
 	if contentLengthHeader == "" {
 		b.handleError(w, nil, http.StatusLengthRequired)
@@ -118,14 +143,22 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tee := io.TeeReader(r.Body, hash)
+
 	result, err := b.driver.PutPayload(r.Context(), &storage.PutRequest{
 		Metadata:      metadata,
-		Data:          r.Body,
-		Digest:        digest,
+		Data:          tee,
+		Digest:        digestParam,
 		ContentLength: contentLength,
 	})
 	if err != nil {
 		b.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	checkSum := hex.EncodeToString(hash.Sum(nil))
+	if checkSum != digest {
+		b.handleError(w, errors.New("checksum mismatch"), http.StatusBadRequest)
 		return
 	}
 
@@ -134,6 +167,22 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		return
 	}
+}
+
+func (b *blobHandler) digestAndHash(digest string) (string, hash.Hash, error) {
+	tokens := strings.Split(digest, ":")
+	if len(tokens) != 2 {
+		return "", nil, fmt.Errorf("invalid digest format '%s'", digest)
+	}
+
+	var h hash.Hash
+	switch tokens[0] {
+	case "sha256":
+		h = sha256.New()
+	default:
+		return "", nil, fmt.Errorf("invalid hash type '%s'", tokens[0])
+	}
+	return tokens[1], h, nil
 }
 
 func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode int) {

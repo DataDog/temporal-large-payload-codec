@@ -12,6 +12,11 @@ import (
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
+// NewHandler creates a v1 HTTP handler for the Large Payload Service.
+//
+// Deprecated: This handler exists for backwards compatibility in order to
+// read large payloads persisted with version v1.
+// This handler will eventually be removed.
 func NewHandler(driver storage.Driver, logger logging.Logger) http.Handler {
 	r := http.NewServeMux()
 	handler := &blobHandler{

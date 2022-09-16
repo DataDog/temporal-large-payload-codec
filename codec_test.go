@@ -1,77 +1,259 @@
 package codec_test
 
 import (
+	"github.com/stretchr/testify/require"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/gogo/protobuf/proto"
-	"github.com/google/go-cmp/cmp"
-	"go.temporal.io/api/common/v1"
-	"google.golang.org/protobuf/testing/protocmp"
 
 	codec "github.com/DataDog/temporal-large-payload-codec"
 	"github.com/DataDog/temporal-large-payload-codec/server"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
+	"go.temporal.io/api/common/v1"
 )
 
-func TestCodec(t *testing.T) {
-	// Create test remote codec service
+func TestV1Codec(t *testing.T) {
+	testCase := []struct {
+		name           string
+		payload        []*common.Payload
+		encodedPayload []*common.Payload
+	}{
+		{
+			name: "data <32 bytes",
+			payload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+					Data: []byte("hello world"),
+				},
+			},
+			encodedPayload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+					Data: []byte("hello world"),
+				},
+			},
+		},
+		{
+			name: "data >32 bytes",
+			payload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"foo": []byte("bar"),
+						"baz": []byte("qux"),
+					},
+					Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+				},
+			},
+			encodedPayload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"encoding":                 []byte("json/plain"),
+						"temporal.io/remote-codec": []byte("v1"),
+					},
+					Data: []byte("{\"metadata\":{\"baz\":\"cXV4\",\"foo\":\"YmFy\"},\"size\":59,\"digest\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\",\"location\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\"}"),
+				},
+			},
+		},
+		{
+			name: "no metadata",
+			payload: []*common.Payload{
+				{
+					Data: []byte("This message is also longer than the 32 bytes limit!"),
+				},
+			},
+			encodedPayload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"encoding":                 []byte("json/plain"),
+						"temporal.io/remote-codec": []byte("v1"),
+					},
+					Data: []byte("{\"metadata\":null,\"size\":52,\"digest\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\",\"location\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\"}"),
+				},
+			},
+		},
+	}
+
+	s, c := setUp(t, "v1")
+	defer s.Close()
+
+	for _, scenario := range testCase {
+		t.Run(scenario.name, func(t *testing.T) {
+			actualEncodedPayload, err := c.Encode(scenario.payload)
+			if err != nil {
+				require.NoError(t, err)
+			}
+			require.Equal(t, scenario.encodedPayload, actualEncodedPayload)
+
+			actualPayload, err := c.Decode(scenario.encodedPayload)
+			if err != nil {
+				require.NoError(t, err)
+			}
+			require.Equal(t, scenario.payload, actualPayload)
+		})
+	}
+}
+
+func TestV2Codec(t *testing.T) {
+	testCase := []struct {
+		name           string
+		payload        []*common.Payload
+		encodedPayload []*common.Payload
+	}{
+		{
+			name: "data <32 bytes",
+			payload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+					Data: []byte("hello world"),
+				},
+			},
+			encodedPayload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+					Data: []byte("hello world"),
+				},
+			},
+		},
+		{
+			name: "data >32 bytes",
+			payload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"foo": []byte("bar"),
+						"baz": []byte("qux"),
+					},
+					Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+				},
+			},
+			encodedPayload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"encoding":                 []byte("json/plain"),
+						"temporal.io/remote-codec": []byte("v2"),
+					},
+					Data: []byte("{\"metadata\":{\"baz\":\"cXV4\",\"foo\":\"YmFy\"},\"size\":59,\"digest\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\",\"location\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\"}"),
+				},
+			},
+		},
+		{
+			name: "no metadata",
+			payload: []*common.Payload{
+				{
+					Data: []byte("This message is also longer than the 32 bytes limit!"),
+				},
+			},
+			encodedPayload: []*common.Payload{
+				{
+					Metadata: map[string][]byte{
+						"encoding":                 []byte("json/plain"),
+						"temporal.io/remote-codec": []byte("v2"),
+					},
+					Data: []byte("{\"metadata\":null,\"size\":52,\"digest\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\",\"location\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\"}"),
+				},
+			},
+		},
+	}
+
+	s, c := setUp(t, "v2")
+	defer s.Close()
+
+	for _, scenario := range testCase {
+		t.Run(scenario.name, func(t *testing.T) {
+			actualEncodedPayload, err := c.Encode(scenario.payload)
+			if err != nil {
+				require.NoError(t, err)
+			}
+			require.Equal(t, scenario.encodedPayload, actualEncodedPayload)
+
+			actualPayload, err := c.Decode(scenario.encodedPayload)
+			if err != nil {
+				require.NoError(t, err)
+			}
+			require.Equal(t, scenario.payload, actualPayload)
+
+		})
+	}
+}
+
+func TestNewCodecWithEncodeVersion(t *testing.T) {
 	s := httptest.NewServer(server.NewHttpHandler(&memory.Driver{}))
 	defer s.Close()
+
+	testCase := []struct {
+		name         string
+		url          string
+		version      string
+		expectsError bool
+	}{
+		{
+			name:         "no version",
+			url:          s.URL,
+			version:      "",
+			expectsError: true,
+		},
+		{
+			name:         "v1",
+			url:          s.URL,
+			version:      "v1",
+			expectsError: false,
+		},
+		{
+			name:         "v2",
+			url:          s.URL,
+			version:      "v2",
+			expectsError: false,
+		},
+		{
+			name:         "unknown version",
+			url:          s.URL,
+			expectsError: true,
+		},
+		{
+			name:         "no prefix",
+			url:          s.URL,
+			expectsError: true,
+		},
+	}
+
+	for _, scenario := range testCase {
+		t.Run(scenario.name, func(t *testing.T) {
+			c, err := codec.New(
+				codec.WithURL(s.URL),
+				codec.WithHTTPClient(s.Client()),
+				codec.WithEncodeVersion(scenario.version),
+			)
+			if scenario.expectsError {
+				require.Error(t, err)
+				require.Nil(t, c)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, c)
+			}
+		})
+	}
+}
+
+func setUp(t *testing.T, version string) (*httptest.Server, *codec.Codec) {
+	// Create test remote codec service
+	s := httptest.NewServer(server.NewHttpHandler(&memory.Driver{}))
+
 	// Create test codec (to be used from Go SDK)
 	c, err := codec.New(
 		codec.WithURL(s.URL),
 		codec.WithHTTPClient(s.Client()),
+		codec.WithEncodeVersion(version),
 		codec.WithMinBytes(32),
 	)
 	if err != nil {
-		t.Fatal(err)
+		require.NoError(t, err)
 	}
 
-	testPayloads := []*common.Payload{
-		{
-			Metadata: map[string][]byte{
-				"foo": []byte("bar"),
-			},
-			Data: []byte("hello world"),
-		},
-		{
-			Metadata: map[string][]byte{
-				"foo": []byte("bar"),
-				"baz": []byte("qux"),
-			},
-			Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
-		},
-		{
-			Data: []byte("hello dave"),
-		},
-	}
-
-	// Encode some test payloads
-	encodeResult, err := c.Encode(testPayloads)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Validate that only large payloads are encoded
-	for i, p := range encodeResult {
-		if testPayloads[i].Size() > 32 {
-			if _, ok := p.GetMetadata()["temporal.io/remote-codec"]; !ok {
-				t.Errorf("expected payload %d to trigger remote codec, got: %s", i, proto.MarshalTextString(p))
-			}
-		} else if diff := cmp.Diff(testPayloads[i], p, protocmp.Transform()); diff != "" {
-			t.Errorf("expected no diff for test payload %d, got:\n%s", i, diff)
-		}
-	}
-
-	decodeResult, err := c.Decode(encodeResult)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for i, testPayload := range testPayloads {
-		if diff := cmp.Diff(testPayload, decodeResult[i], protocmp.Transform()); diff != "" {
-			t.Errorf("expected no diff for test payload, got: %s", diff)
-		}
-	}
+	return s, c
 }

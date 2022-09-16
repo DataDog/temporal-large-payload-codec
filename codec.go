@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,6 +17,10 @@ import (
 
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
+)
+
+const (
+	RemoteCodedName = "temporal.io/remote-codec"
 )
 
 type remotePayload struct {
@@ -44,6 +49,17 @@ func WithURL(url string) Option {
 	return applier(func(c *Codec) error {
 		c.url = url
 		return nil
+	})
+}
+
+// WithEncodeVersion sets the LPS version for encoding payloads.
+func WithEncodeVersion(version string) Option {
+	return applier(func(c *Codec) error {
+		if version == "v1" || version == "v2" {
+			c.version = version
+			return nil
+		}
+		return errors.Errorf("'%s' is an unkown LPS server version", version)
 	})
 }
 
@@ -129,14 +145,17 @@ func New(opts ...Option) (*Codec, error) {
 	if c.url == "" {
 		return nil, fmt.Errorf("a remote codec URL is required")
 	}
+
+	if c.version == "" {
+		c.version = "v2"
+	}
+
 	// Validate URL and set version
-	u, err := url.Parse(c.url)
+	u, err := url.Parse(fmt.Sprintf("%s/%s", c.url, c.version))
 	if err != nil {
 		return nil, err
 	}
-	// Set v1 path
-	u.Path = "v1"
-	c.url = u.String()
+
 	// Check connectivity
 	u.Path = path.Join(u.Path, "health/head")
 	resp, err := c.client.Head(u.String())
@@ -151,8 +170,9 @@ func New(opts ...Option) (*Codec, error) {
 }
 
 type Codec struct {
-	client *http.Client
-	url    string
+	client  *http.Client
+	url     string
+	version string
 	// Minimum size of the payload in order to use remote codec
 	minBytes int
 }
@@ -182,7 +202,7 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPut,
-		c.url,
+		fmt.Sprintf("%s/%s", c.url, c.version),
 		bytes.NewReader(payload.GetData()),
 	)
 	if err != nil {
@@ -226,33 +246,33 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	if err != nil {
 		return nil, err
 	}
-	result.Metadata["temporal.io/remote-codec"] = []byte("v1")
+	result.Metadata[RemoteCodedName] = []byte(c.version)
 
 	return result, nil
 }
 
 func (c *Codec) Decode(payloads []*common.Payload) ([]*common.Payload, error) {
 	result := make([]*common.Payload, len(payloads))
-	for i, p := range payloads {
-		if codecVersion, ok := p.GetMetadata()["temporal.io/remote-codec"]; ok {
+	for i, payload := range payloads {
+		if codecVersion, ok := payload.GetMetadata()[RemoteCodedName]; ok {
 			switch string(codecVersion) {
-			case "v1":
-				decodedPayload, err := c.decodePayload(context.Background(), p)
+			case "v1", "v2":
+				decodedPayload, err := c.decodePayload(context.Background(), payload, string(codecVersion))
 				if err != nil {
 					return nil, err
 				}
 				result[i] = decodedPayload
 			default:
-				return nil, fmt.Errorf("unknown version for temporal.io/remote-codec: %s", codecVersion)
+				return nil, fmt.Errorf("unknown version for %s: %s", RemoteCodedName, codecVersion)
 			}
 		} else {
-			result[i] = p
+			result[i] = payload
 		}
 	}
 	return result, nil
 }
 
-func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload) (*common.Payload, error) {
+func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, version string) (*common.Payload, error) {
 	var remoteP remotePayload
 	if err := converter.GetDefaultDataConverter().FromPayload(payload, &remoteP); err != nil {
 		return nil, err
@@ -261,7 +281,7 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload) (*co
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		c.url,
+		fmt.Sprintf("%s/%s", c.url, version),
 		nil,
 	)
 	if err != nil {
@@ -273,7 +293,6 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload) (*co
 	q.Set("digest", remoteP.Digest)
 	req.URL.RawQuery = q.Encode()
 
-	// TODO: double check content type
 	req.Header.Set("Content-Type", "application/octet-stream")
 	// TODO: we temporarily need this because we aren't checking object metadata on the server
 	req.Header.Set("X-Payload-Expected-Content-Length", strconv.FormatUint(uint64(remoteP.Size), 10))
@@ -288,14 +307,23 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload) (*co
 		return nil, fmt.Errorf("server returned status code %d: %s", resp.StatusCode, respBody)
 	}
 
-	b, err := io.ReadAll(resp.Body)
+	sha2 := sha256.New()
+	tee := io.TeeReader(resp.Body, sha2)
+	b, err := io.ReadAll(tee)
 	if err != nil {
 		return nil, err
 	}
+
 	if uint(len(b)) != remoteP.Size {
 		return nil, fmt.Errorf("wanted object of size %d, got %d", remoteP.Size, len(b))
 	}
-	// TODO: check digest as well?
+
+	if version == "v2" {
+		checkSum := hex.EncodeToString(sha2.Sum(nil))
+		if fmt.Sprintf("sha256:%s", checkSum) != remoteP.Digest {
+			return nil, fmt.Errorf("wanted object sha %s, got %s", remoteP.Digest, checkSum)
+		}
+	}
 
 	return &common.Payload{
 		Metadata: remoteP.Metadata,
