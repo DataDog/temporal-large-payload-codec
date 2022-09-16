@@ -8,13 +8,13 @@ In essence, the Large Payload Service implements a [content addressed storage](h
 
 <!-- toc -->
 
-- [Large Payload Service](#large-payload-service)
-  - [Architecture](#architecture)
-  - [Usage](#usage)
-  - [Development](#development)
-    - [Build the Source](#build-the-source)
-    - [Run the Tests](#run-the-tests)
-    - [Format the Code](#format-the-code)
+- [Architecture](#architecture)
+- [Usage](#usage)
+- [Development](#development)
+  * [Build the Source](#build-the-source)
+  * [Run the Tests](#run-the-tests)
+  * [Format the Code](#format-the-code)
+- [CI](#ci)
 
 <!-- tocstop -->
 
@@ -117,4 +117,13 @@ go test ./...
 
 ```sh
 gofmt -l -w .
+```
+
+## CI
+
+CI is configured via a GitHub Workflow in [.github/workflows/ci.yaml](.github/workflows/ci.yaml).
+You can test and run the pipeline locally by installed `[act](https://github.com/nektos/act)` and running:
+
+```shell
+act pull_request
 ```

@@ -6,13 +6,42 @@ import (
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/s3"
+	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+)
 
-	"github.com/stretchr/testify/require"
+const (
+	dummyGCSCredentials = `
+{
+  "client_id": "foo.apps.googleusercontent.com",
+  "client_secret": "snafu",
+  "refresh_token": "token",
+  "type": "authorized_user"
+}
+`
 )
 
 func TestCreateDriver(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "lps-test")
+	if err != nil {
+		require.NoError(t, err)
+	}
+
+	// write a dummy credentials GCS file
+	_, err = tmpFile.WriteString(dummyGCSCredentials)
+	if err != nil {
+		require.NoError(t, err)
+	}
+	err = tmpFile.Sync()
+	if err != nil {
+		require.NoError(t, err)
+	}
+
+	defer func() {
+		_ = os.Remove(tmpFile.Name())
+	}()
+
 	type testCases struct {
 		description    string
 		testEnv        map[string]string
@@ -51,15 +80,21 @@ func TestCreateDriver(t *testing.T) {
 			expectError:    false,
 		},
 		{
-			description:    "s3 driver",
-			testEnv:        map[string]string{"AWS_REGION": "eu-central-1", "BUCKET": "my-bucket"},
+			description: "s3 driver",
+			testEnv: map[string]string{
+				"AWS_REGION": "eu-central-1",
+				"BUCKET":     "my-bucket",
+			},
 			driverName:     "s3",
 			expectedDriver: &s3.Driver{},
 			expectError:    false,
 		},
 		{
-			description:    "gcs driver",
-			testEnv:        map[string]string{"BUCKET": "my-bucket"},
+			description: "gcs driver",
+			testEnv: map[string]string{
+				"BUCKET":                         "my-bucket",
+				"GOOGLE_APPLICATION_CREDENTIALS": tmpFile.Name(),
+			},
 			driverName:     "gcs",
 			expectedDriver: &gcs.Driver{},
 			expectError:    false,
