@@ -19,13 +19,11 @@ import (
 )
 
 type remotePayload struct {
-	// Content of the original payload's Metadata
+	// Content of the original payload's Metadata.
 	Metadata map[string][]byte `json:"metadata"`
-	// Number of bytes in the payload Data
+	// Number of bytes in the payload Data.
 	Size uint `json:"size"`
-	// Digest of the payload Data, prefixed with the algorithm.
-	//
-	// E.g. sha256:deadbeef
+	// Digest of the payload Data, prefixed with the algorithm, e.g. sha256:deadbeef.
 	Digest string `json:"digest"`
 	// URL where the blob was uploaded.
 	Location string `json:"location"`
