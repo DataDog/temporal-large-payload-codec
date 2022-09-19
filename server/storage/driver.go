@@ -24,26 +24,22 @@ type Validatable interface {
 }
 
 type PutRequest struct {
-	Metadata      map[string][]byte
 	Data          io.Reader
+	Key           string
 	Digest        string
 	ContentLength uint64
 }
 
 type PutResponse struct {
-	// Optional URL where the blob was uploaded.
-	Location string
+	// Key used to retrieve the stored data via a GetRequest.
+	Key string
 }
 
 type GetRequest struct {
-	Digest string
+	Key    string
 	Writer io.Writer
 }
 
 type GetResponse struct {
 	ContentLength uint64
-}
-
-func ComputeKey(digest string) string {
-	return fmt.Sprintf("blobs/%s", digest)
 }

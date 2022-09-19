@@ -51,6 +51,7 @@ func TestWorker(t *testing.T) {
 	// Create test codec (to be used from Go SDK)
 	testCodec, err := codec.New(
 		codec.WithURL(testCodecServer.URL),
+		codec.WithNamespace("e2e-test"),
 		codec.WithHTTPClient(testCodecServer.Client()),
 		codec.WithMinBytes(32),
 	)

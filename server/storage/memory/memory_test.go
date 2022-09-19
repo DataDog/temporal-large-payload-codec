@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestDriver_PutPayload(t *testing.T) {
 	)
 
 	// Get missing payload
-	_, err = d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:foobar", Writer: &buf})
+	_, err = d.GetPayload(ctx, &storage.GetRequest{Key: "sha256:foobar", Writer: &buf})
 	var blobNotFound *storage.ErrBlobNotFound
 	if !errors.As(err, &blobNotFound) {
 		t.Errorf("expected error %q, got %q", storage.ErrBlobNotFound{}, err)
@@ -33,6 +34,7 @@ func TestDriver_PutPayload(t *testing.T) {
 	testPayloadBytes := []byte("hello world")
 	if _, err := d.PutPayload(ctx, &storage.PutRequest{
 		Data:          bytes.NewReader(testPayloadBytes),
+		Key:           "blobs/sha256:test",
 		Digest:        "sha256:test",
 		ContentLength: uint64(len(testPayloadBytes)),
 	}); err != nil {
@@ -40,14 +42,12 @@ func TestDriver_PutPayload(t *testing.T) {
 	}
 
 	// Get the payload back out and compare to original bytes
-	_, err = d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:test", Writer: &buf})
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, err = d.GetPayload(ctx, &storage.GetRequest{Key: "blobs/sha256:test", Writer: &buf})
+	require.NoError(t, err)
+
 	b, err := io.ReadAll(&buf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	if string(b) != string(testPayloadBytes) {
 		t.Errorf("expected payload data %q, got %q", testPayloadBytes, b)
 	}

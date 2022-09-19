@@ -8,7 +8,7 @@ In essence, the Large Payload Service implements a [content addressed storage](h
 
 <!-- toc -->
 
-- [Architecture](#architecture)
+- [API](#api)
 - [Usage](#usage)
 - [Development](#development)
   * [Build the Source](#build-the-source)
@@ -18,17 +18,42 @@ In essence, the Large Payload Service implements a [content addressed storage](h
 
 <!-- tocstop -->
 
-## Architecture
+## API
 
 Architecturally, the Large Payload Service is an HTTP server offering the following API:
 
-- `/v1/health/head`: Health check endpoint. Returns the HTTP response status code 200 if the service is running correctly. Otherwise, an error code is returned.
-- `/v1/blobs/put`: Upload endpoint expecting a `PUT` request with the `Content-Type` header of `application/octet-stream`.
-The endpoint also expects a `digest` query parameter, specifying the key under which to store the sent data.
-The `Content-Length` needs to specify the length of the data in bytes, and the `X-Temporal-Metadata` needs to specify a base64 encoded JSON string.
-- `/v1/blobs/get`: Download endpoint expecting a `GET` request with the `Content-Type` header of `application/octet-stream`.
-The endpoint also expects a `digest` query parameter, specifying the key for the data to retrieve.
-The `X-Payload-Expected-Content-Length` header needs to be set to the expected size of the retrieved data in bytes.
+- `/v2/health/head`: Health check endpoint using a `HEAD` request.
+   
+   Returns the HTTP response status code 200 if the service is running correctly. 
+   Otherwise, an error code is returned.
+
+- `/v2/blobs/put`: Upload endpoint expecting a `PUT` request.
+
+   **Required headers**:
+   - `Content-Type` set to `application/octet-stream`.
+   - `Content-Length` set to the length of payload the data in bytes.
+   - `X-Temporal-Metadata` set to the base64 encoded JSON of the Temporal Metadata.
+
+   **Query parameters**:
+   - `namespace` The Temporal namespace the client using the codec is connected to.
+  
+     The namespace forms part of the key for retrieval of the payload.
+   - `digest` Specifies the checksum over the payload data using the format `sha256:<sha256_hex_encoded_value>`.
+
+   The returned _key_ of the put request needs to be stored and used for later retrieval of the payload.
+   It is up to the Large Payload Server and the backend driver how to arrange the data in the backing data store.
+   The server will honor, however, the value of `remote-codec/key-prefix` in the Temporal Metadata passed via the `X-Temporal-Metadata` header.
+   It will use the specified string as prefix in the storage path.
+
+- `/v2/blobs/get`: Download endpoint expecting a `GET` request.
+
+  **Required headers**:
+  - `Content-Type` set to `application/octet-stream`.
+  - `X-Payload-Expected-Content-Length` set to the expected size of the payload data in bytes.
+
+  **Query parameters**:
+  - `key` specifying the key for the payload to retrieve.
+
 
 ## Usage
 
