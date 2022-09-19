@@ -1,17 +1,36 @@
 package v2
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/DataDog/temporal-large-payload-codec/logging"
+	"hash"
+	"io"
 	"net/http"
+	"regexp"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
+const (
+	keyPrefixName = "remote-codec/key-prefix"
+)
+
+var (
+	validPrefix = regexp.MustCompile(`^[0-9a-zA-Z_\-/]+$`).MatchString
+)
+
+// NewHandler creates a v2 HTTP handler for the Large Payload Service.
+//
+// Compared to v1, this version decouples the storage path from the digest/checksum.
+// It also implements checksum validation.
 func NewHandler(driver storage.Driver, logger logging.Logger) http.Handler {
 	r := http.NewServeMux()
 	handler := &blobHandler{
@@ -48,11 +67,6 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		b.handleError(w, fmt.Errorf("missing or incorrect Content-Type header"), http.StatusBadRequest)
 		return
 	}
-	digest := r.URL.Query().Get("digest")
-	if digest == "" {
-		b.handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
-		return
-	}
 
 	expectedLengthHeader := r.Header.Get("X-Payload-Expected-Content-Length")
 	if expectedLengthHeader == "" {
@@ -64,9 +78,16 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		b.handleError(w, fmt.Errorf("expected content length header %s is invalid: %w", expectedLengthHeader, err), http.StatusBadRequest)
 		return
 	}
+
 	w.Header().Set("Content-Length", strconv.FormatUint(expectedLength, 10))
 
-	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digest, Writer: w}); err != nil {
+	keyParam := r.URL.Query().Get("key")
+	if keyParam == "" {
+		b.handleError(w, errors.New("key query parameter is required"), http.StatusBadRequest)
+		return
+	}
+
+	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Key: keyParam, Writer: w}); err != nil {
 		w.Header().Del("Content-Length") // unset Content-Length on errors
 
 		var blobNotFound *storage.ErrBlobNotFound
@@ -83,15 +104,12 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		b.handleError(w, nil, http.StatusMethodNotAllowed)
 		return
 	}
+
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/octet-stream" {
 		b.handleError(w, fmt.Errorf("missing or incorrect Content-Type header"), http.StatusBadRequest)
 		return
 	}
-	digest := r.URL.Query().Get("digest")
-	if digest == "" {
-		b.handleError(w, fmt.Errorf("digest query parameter is required"), http.StatusBadRequest)
-		return
-	}
+
 	contentLengthHeader := r.Header.Get("Content-Length")
 	if contentLengthHeader == "" {
 		b.handleError(w, nil, http.StatusLengthRequired)
@@ -107,21 +125,40 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawMetadata, err := base64.StdEncoding.DecodeString(r.Header.Get("X-Temporal-Metadata"))
+	namespaceParam := r.URL.Query().Get("namespace")
+	if namespaceParam == "" {
+		b.handleError(w, errors.New("namespace query parameter is required"), http.StatusBadRequest)
+		return
+	}
+
+	digestParam := r.URL.Query().Get("digest")
+	if digestParam == "" {
+		b.handleError(w, errors.New("digest query parameter is required"), http.StatusBadRequest)
+		return
+	}
+
+	digest, hasher, err := b.digestAndHash(digestParam)
 	if err != nil {
 		b.handleError(w, err, http.StatusBadRequest)
 		return
 	}
-	var metadata map[string][]byte
-	if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
+
+	temporalMetadata, err := b.decodeTemporalMetadata(r)
+	if err != nil {
 		b.handleError(w, err, http.StatusBadRequest)
 		return
 	}
 
+	tee := io.TeeReader(r.Body, hasher)
+	key, err := b.computeKey(namespaceParam, digestParam, temporalMetadata)
+	if err != nil {
+		b.handleError(w, err, http.StatusBadRequest)
+		return
+	}
 	result, err := b.driver.PutPayload(r.Context(), &storage.PutRequest{
-		Metadata:      metadata,
-		Data:          r.Body,
-		Digest:        digest,
+		Data:          tee,
+		Key:           key,
+		Digest:        digestParam,
 		ContentLength: contentLength,
 	})
 	if err != nil {
@@ -129,11 +166,44 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Location", result.Location)
+	checkSum := hex.EncodeToString(hasher.Sum(nil))
+	if checkSum != digest {
+		b.handleError(w, errors.New("checksum mismatch"), http.StatusBadRequest)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		return
 	}
+}
+
+func (b *blobHandler) decodeTemporalMetadata(r *http.Request) (map[string][]byte, error) {
+	rawMetadata, err := base64.StdEncoding.DecodeString(r.Header.Get("X-Temporal-Metadata"))
+	if err != nil {
+		return nil, err
+	}
+	var metadata map[string][]byte
+	if err := json.Unmarshal(rawMetadata, &metadata); err != nil {
+		return nil, err
+	}
+	return metadata, nil
+}
+
+func (b *blobHandler) digestAndHash(digest string) (string, hash.Hash, error) {
+	tokens := strings.Split(digest, ":")
+	if len(tokens) != 2 {
+		return "", nil, fmt.Errorf("invalid digest format '%s'", digest)
+	}
+
+	var h hash.Hash
+	switch tokens[0] {
+	case "sha256":
+		h = sha256.New()
+	default:
+		return "", nil, fmt.Errorf("invalid hash type '%s'", tokens[0])
+	}
+	return tokens[1], h, nil
 }
 
 func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode int) {
@@ -145,4 +215,39 @@ func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode i
 		_, _ = w.Write([]byte(err.Error()))
 	}
 	return
+}
+
+func (b *blobHandler) computeKey(namespace string, dataDigest string, metadata map[string][]byte) (string, error) {
+	metadataHash := hashMetadata(metadata)
+	var key string
+
+	prefix := string(metadata[keyPrefixName])
+	if prefix == "" {
+		key = fmt.Sprintf("/blobs/%s/common/%s/%s", namespace, dataDigest, metadataHash)
+	} else {
+		if !validPrefix(prefix) {
+			return "", fmt.Errorf("'%s' is not a valid prefix", prefix)
+		}
+		key = fmt.Sprintf("/blobs/%s/custom/%s/%s/%s", namespace, prefix, dataDigest, metadataHash)
+	}
+	return key, nil
+}
+
+func hashMetadata(metadata map[string][]byte) string {
+	i := 0
+	keys := make([]string, len(metadata))
+	for k := range metadata {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+
+	h := sha256.New()
+	for _, k := range keys {
+		v := metadata[k]
+		h.Write([]byte(k))
+		h.Write(v)
+	}
+
+	return fmt.Sprintf("sha256:%s", hex.EncodeToString(h.Sum(nil)))
 }

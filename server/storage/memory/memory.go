@@ -29,10 +29,10 @@ func (d *Driver) PutPayload(_ context.Context, request *storage.PutRequest) (*st
 	if d.blobs == nil {
 		d.blobs = make(map[string][]byte)
 	}
-	d.blobs[request.Digest] = b
+	d.blobs[request.Key] = b
 
 	return &storage.PutResponse{
-		Location: request.Digest,
+		Key: request.Key,
 	}, nil
 }
 
@@ -40,7 +40,7 @@ func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) (*st
 	d.mux.RLock()
 	defer d.mux.RUnlock()
 
-	if b, ok := d.blobs[request.Digest]; ok {
+	if b, ok := d.blobs[request.Key]; ok {
 		if _, err := io.Copy(request.Writer, bytes.NewReader(b)); err != nil {
 			return nil, err
 		}
