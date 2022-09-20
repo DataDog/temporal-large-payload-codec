@@ -1,8 +1,11 @@
 package codec_test
 
 import (
+	"context"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"github.com/stretchr/testify/require"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	codec "github.com/DataDog/temporal-large-payload-codec"
@@ -76,7 +79,7 @@ func TestV1Codec(t *testing.T) {
 		},
 	}
 
-	s, c := setUp(t, "v1")
+	s, c, _ := setUp(t, "v1")
 	defer s.Close()
 
 	for _, scenario := range testCase {
@@ -88,9 +91,7 @@ func TestV1Codec(t *testing.T) {
 			require.Equal(t, scenario.encodedPayload, actualEncodedPayload)
 
 			actualPayload, err := c.Decode(scenario.encodedPayload)
-			if err != nil {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 			require.Equal(t, scenario.payload, actualPayload)
 		})
 	}
@@ -161,7 +162,7 @@ func TestV2Codec(t *testing.T) {
 		},
 	}
 
-	s, c := setUp(t, "v2")
+	s, c, _ := setUp(t, "v2")
 	defer s.Close()
 
 	for _, scenario := range testCase {
@@ -180,6 +181,39 @@ func TestV2Codec(t *testing.T) {
 
 		})
 	}
+}
+
+func TestDecodeExistingV1Payload(t *testing.T) {
+	s, c, d := setUp(t, "v1")
+	defer s.Close()
+
+	encodedPayload := &common.Payload{
+		Metadata: map[string][]byte{
+			"encoding":                 []byte("json/plain"),
+			"temporal.io/remote-codec": []byte("v1"),
+		},
+		Data: []byte("{\"metadata\":{\"baz\":\"cXV4\",\"foo\":\"YmFy\"},\"size\":59,\"digest\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\",\"location\":\"\"}"),
+	}
+
+	expectedPayload := &common.Payload{
+		Metadata: map[string][]byte{
+			"foo": []byte("bar"),
+			"baz": []byte("qux"),
+		},
+		Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+	}
+
+	put := storage.PutRequest{
+		Digest:        "sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c",
+		ContentLength: uint64(len(string(expectedPayload.Data))),
+		Data:          strings.NewReader(string(expectedPayload.Data)),
+	}
+	_, err := d.PutPayload(context.Background(), &put)
+	require.NoError(t, err)
+
+	actualPayload, err := c.Decode([]*common.Payload{encodedPayload})
+	require.NoError(t, err)
+	require.Equal(t, []*common.Payload{expectedPayload}, actualPayload)
 }
 
 func TestNewCodecWithEncodeVersion(t *testing.T) {
@@ -240,9 +274,10 @@ func TestNewCodecWithEncodeVersion(t *testing.T) {
 	}
 }
 
-func setUp(t *testing.T, version string) (*httptest.Server, *codec.Codec) {
+func setUp(t *testing.T, version string) (*httptest.Server, *codec.Codec, storage.Driver) {
 	// Create test remote codec service
-	s := httptest.NewServer(server.NewHttpHandler(&memory.Driver{}))
+	d := &memory.Driver{}
+	s := httptest.NewServer(server.NewHttpHandler(d))
 
 	// Create test codec (to be used from Go SDK)
 	c, err := codec.New(
@@ -255,5 +290,5 @@ func setUp(t *testing.T, version string) (*httptest.Server, *codec.Codec) {
 		require.NoError(t, err)
 	}
 
-	return s, c
+	return s, c, d
 }
