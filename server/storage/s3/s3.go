@@ -90,16 +90,11 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 }
 
 func (d *Driver) Validate(ctx context.Context) error {
-	result, err := d.client.ListBuckets(ctx, &s3.ListBucketsInput{})
-	if err != nil {
-		return err
+	input := &s3.HeadBucketInput{
+		Bucket: &d.bucket,
 	}
-
-	for _, bucket := range result.Buckets {
-		if *bucket.Name == d.bucket {
-			return nil
-		}
+	if _, err := d.client.HeadBucket(ctx, input); err != nil {
+		return fmt.Errorf("unable to access S3 bucket '%s'", d.bucket)
 	}
-
-	return fmt.Errorf("unable to access S3 bucket '%s'", d.bucket)
+	return nil
 }
