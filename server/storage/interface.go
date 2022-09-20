@@ -28,15 +28,16 @@ type PutRequest struct {
 	Data          io.Reader
 	Digest        string
 	ContentLength uint64
+	Prefix        string
 }
 
 type PutResponse struct {
-	// Optional URL where the blob was uploaded.
-	Location string
+	// Key used to retrieve the stored data via a GetRequest.
+	Key string
 }
 
 type GetRequest struct {
-	Digest string
+	Key    string
 	Writer io.Writer
 }
 

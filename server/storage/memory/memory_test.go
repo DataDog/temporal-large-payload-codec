@@ -20,7 +20,7 @@ func TestDriver_PutPayload(t *testing.T) {
 	)
 
 	// Get missing payload
-	_, err = d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:foobar", Writer: &buf})
+	_, err = d.GetPayload(ctx, &storage.GetRequest{Key: "sha256:foobar", Writer: &buf})
 	var blobNotFound *storage.ErrBlobNotFound
 	if !errors.As(err, &blobNotFound) {
 		t.Errorf("expected error %q, got %q", storage.ErrBlobNotFound{}, err)
@@ -40,7 +40,7 @@ func TestDriver_PutPayload(t *testing.T) {
 	}
 
 	// Get the payload back out and compare to original bytes
-	_, err = d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:test", Writer: &buf})
+	_, err = d.GetPayload(ctx, &storage.GetRequest{Key: "sha256:test", Writer: &buf})
 	if err != nil {
 		t.Fatal(err)
 	}

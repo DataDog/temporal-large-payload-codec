@@ -12,6 +12,7 @@ import (
 	"io"
 )
 
+// Config provides all configuration to create the S3 based driver for LPS.
 type Config struct {
 	Config aws.Config
 	Bucket string
@@ -55,7 +56,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 	w := sequentialWriterAt{w: r.Writer}
 	numBytes, err := d.downloader.Download(ctx, &w, &s3.GetObjectInput{
 		Bucket: &d.bucket,
-		Key:    aws.String(storage.ComputeKey(r.Digest)),
+		Key:    aws.String(storage.ComputeKey(r.Key)),
 	})
 	if err != nil {
 		var nsk *s3types.NoSuchKey
@@ -73,9 +74,10 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
-	result, err := d.uploader.Upload(ctx, &s3.PutObjectInput{
+	key := aws.String(storage.ComputeKey(r.Digest))
+	_, err := d.uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:        &d.bucket,
-		Key:           aws.String(storage.ComputeKey(r.Digest)),
+		Key:           key,
 		Body:          r.Data,
 		ContentLength: int64(r.ContentLength),
 		StorageClass:  d.storageClass,
@@ -85,7 +87,7 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 	}
 
 	return &storage.PutResponse{
-		Location: result.Location,
+		Key: *key,
 	}, nil
 }
 

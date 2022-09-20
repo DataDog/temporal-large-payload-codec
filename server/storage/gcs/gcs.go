@@ -28,7 +28,7 @@ func New(ctx context.Context, bucket string) (*Driver, error) {
 }
 
 func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
-	reader, err := d.client.Bucket(d.bucket).Object(storage.ComputeKey(r.Digest)).NewReader(ctx)
+	reader, err := d.client.Bucket(d.bucket).Object(storage.ComputeKey(r.Key)).NewReader(ctx)
 	if err != nil {
 		if errors.Is(err, gcs.ErrObjectNotExist) {
 			return nil, &storage.ErrBlobNotFound{Err: err}
@@ -65,7 +65,7 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 		return nil, fmt.Errorf("Writer.Close: %v", err)
 	}
 	return &storage.PutResponse{
-		Location: fmt.Sprintf("gs://%s/%s", d.bucket, path),
+		Key: path,
 	}, nil
 }
 

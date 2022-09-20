@@ -108,7 +108,7 @@ func TestGetBlobV1(t *testing.T) {
 				"X-Payload-Expected-Content-Length": "10",
 			},
 			queryParams: map[string]string{
-				"digest": putResponse.Location,
+				"digest": putResponse.Key,
 			},
 			want:       `hello world`,
 			statusCode: http.StatusOK,
@@ -188,7 +188,7 @@ func TestGetBlobV2(t *testing.T) {
 			statusCode: http.StatusBadRequest,
 		},
 		{
-			name:   "Missing digest",
+			name:   "Missing key",
 			target: "blobs/get",
 			method: http.MethodGet,
 			headers: map[string]string{
@@ -196,22 +196,8 @@ func TestGetBlobV2(t *testing.T) {
 				"X-Payload-Expected-Content-Length": "10",
 			},
 			queryParams: map[string]string{},
-			want:        `digest query parameter is required`,
+			want:        `key query parameter is required`,
 			statusCode:  http.StatusBadRequest,
-		},
-		{
-			name:   "Wrong digest format",
-			target: "blobs/get",
-			method: http.MethodGet,
-			headers: map[string]string{
-				"Content-Type":                      "application/octet-stream",
-				"X-Payload-Expected-Content-Length": "10",
-			},
-			queryParams: map[string]string{
-				"digest": "12345",
-			},
-			want:       `invalid digest format '12345'`,
-			statusCode: http.StatusBadRequest,
 		},
 		{
 			name:   "Missing length",
@@ -221,38 +207,10 @@ func TestGetBlobV2(t *testing.T) {
 				"Content-Type": "application/octet-stream",
 			},
 			queryParams: map[string]string{
-				"digest": "sha256:12345",
+				"key": "sha256:12345",
 			},
 			want:       `expected content length header is required`,
 			statusCode: http.StatusBadRequest,
-		},
-		{
-			name:   "Wrong hash function",
-			target: "blobs/get",
-			method: http.MethodGet,
-			headers: map[string]string{
-				"Content-Type":                      "application/octet-stream",
-				"X-Payload-Expected-Content-Length": "10",
-			},
-			queryParams: map[string]string{
-				"digest": "sha512:12345",
-			},
-			want:       `invalid hash type 'sha512'`,
-			statusCode: http.StatusBadRequest,
-		},
-		{
-			name:   "Wrong digest",
-			target: "blobs/get",
-			method: http.MethodGet,
-			headers: map[string]string{
-				"Content-Type":                      "application/octet-stream",
-				"X-Payload-Expected-Content-Length": "10",
-			},
-			queryParams: map[string]string{
-				"digest": "sha256:12345",
-			},
-			want:       `blob not found: <nil>`,
-			statusCode: http.StatusNotFound,
 		},
 		{
 			name:   "Successful retrieval",
@@ -263,7 +221,7 @@ func TestGetBlobV2(t *testing.T) {
 				"X-Payload-Expected-Content-Length": "10",
 			},
 			queryParams: map[string]string{
-				"digest": putResponse.Location,
+				"key": putResponse.Key,
 			},
 			want:       `hello world`,
 			statusCode: http.StatusOK,

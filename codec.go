@@ -23,6 +23,10 @@ const (
 	RemoteCodedName = "temporal.io/remote-codec"
 )
 
+type keyResponse struct {
+	Key string
+}
+
 type remotePayload struct {
 	// Content of the original payload's Metadata.
 	Metadata map[string][]byte `json:"metadata"`
@@ -30,8 +34,10 @@ type remotePayload struct {
 	Size uint `json:"size"`
 	// Digest of the payload Data, prefixed with the algorithm, e.g. sha256:deadbeef.
 	Digest string `json:"digest"`
-	// URL where the blob was uploaded.
+	// URL where the blob was uploaded. Deprecated.
 	Location string `json:"location"`
+	// The key to retrieve the payload from remote storage.
+	Key string `json:"key"`
 }
 
 type Option interface {
@@ -185,11 +191,11 @@ func (c *Codec) Encode(payloads []*common.Payload) ([]*common.Payload, error) {
 
 	for i, payload := range payloads {
 		if payload.Size() > c.minBytes {
-			p, err := c.encodePayload(ctx, payload)
+			encodePayload, err := c.encodePayload(ctx, payload)
 			if err != nil {
 				return nil, err
 			}
-			result[i] = p
+			result[i] = encodePayload
 		} else {
 			result[i] = payload
 		}
@@ -232,16 +238,22 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 		return nil, err
 	}
 
+	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusCreated {
-		respBody, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("server returned status code %d: %s", resp.StatusCode, respBody)
+	}
+
+	var key keyResponse
+	err = json.Unmarshal(respBody, &key)
+	if err != nil {
+		return nil, fmt.Errorf("unable to unmarshal put response: %w", err)
 	}
 
 	result, err := converter.GetDefaultDataConverter().ToPayload(remotePayload{
 		Metadata: payload.GetMetadata(),
 		Size:     uint(len(payload.GetData())),
 		Digest:   digest,
-		Location: resp.Header.Get("Location"),
+		Key:      key.Key,
 	})
 	if err != nil {
 		return nil, err
@@ -290,7 +302,12 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 	req.URL.Path = path.Join(req.URL.Path, "blobs/get")
 
 	q := req.URL.Query()
-	q.Set("digest", remoteP.Digest)
+	if version == "v1" {
+		q.Set("digest", remoteP.Digest)
+	}
+	if version == "v2" {
+		q.Set("key", remoteP.Key)
+	}
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/octet-stream")
@@ -318,11 +335,9 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 		return nil, fmt.Errorf("wanted object of size %d, got %d", remoteP.Size, len(b))
 	}
 
-	if version == "v2" {
-		checkSum := hex.EncodeToString(sha2.Sum(nil))
-		if fmt.Sprintf("sha256:%s", checkSum) != remoteP.Digest {
-			return nil, fmt.Errorf("wanted object sha %s, got %s", remoteP.Digest, checkSum)
-		}
+	checkSum := hex.EncodeToString(sha2.Sum(nil))
+	if fmt.Sprintf("sha256:%s", checkSum) != remoteP.Digest {
+		return nil, fmt.Errorf("wanted object sha %s, got %s", remoteP.Digest, checkSum)
 	}
 
 	return &common.Payload{

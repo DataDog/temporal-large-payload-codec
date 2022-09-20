@@ -58,15 +58,9 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	digestParam := r.URL.Query().Get("digest")
-	if digestParam == "" {
-		b.handleError(w, errors.New("digest query parameter is required"), http.StatusBadRequest)
-		return
-	}
-
-	_, _, err := b.digestAndHash(digestParam)
-	if err != nil {
-		b.handleError(w, err, http.StatusBadRequest)
+	keyParam := r.URL.Query().Get("key")
+	if keyParam == "" {
+		b.handleError(w, errors.New("key query parameter is required"), http.StatusBadRequest)
 		return
 	}
 
@@ -82,7 +76,7 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Length", strconv.FormatUint(expectedLength, 10))
 
-	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Digest: digestParam, Writer: w}); err != nil {
+	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Key: keyParam, Writer: w}); err != nil {
 		w.Header().Del("Content-Length") // unset Content-Length on errors
 
 		var blobNotFound *storage.ErrBlobNotFound
@@ -162,7 +156,6 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Location", result.Location)
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		return
