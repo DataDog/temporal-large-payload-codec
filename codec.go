@@ -99,6 +99,13 @@ func WithHTTPClient(client *http.Client) Option {
 	})
 }
 
+func WithPrefixGeneratorFunc(f func(map[string][]byte) string) Option {
+	return applier(func(c *Codec) error {
+		c.prefixGeneratorFunc = f
+		return nil
+	})
+}
+
 // WithHTTPRoundTripper sets custom Transport on the http.Client.
 //
 // This may be used to implement use cases including authentication or tracing.
@@ -164,11 +171,18 @@ func New(opts ...Option) (*Codec, error) {
 }
 
 type Codec struct {
-	client  *http.Client
-	url     string
+	// client is the HTTP client used for talking to the LPS server.
+	client *http.Client
+	// url is the base URL of the LPS server.
+	url string
+	// version is the LPS API version (v1 or v2).
 	version string
-	// Minimum size of the payload in order to use remote codec
+	// minBytes is the minimum size of the payload in order to use remote codec.
 	minBytes int
+	// prefixGeneratorFunc defines a function used to generate a prefix for the data storage key.
+	// The prefixGeneratorFunc gets passed the payload metadata and can use its information to
+	// build the prefix.
+	prefixGeneratorFunc func(map[string][]byte) string
 }
 
 func (c *Codec) Encode(payloads []*common.Payload) ([]*common.Payload, error) {
