@@ -72,7 +72,7 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Length", strconv.FormatUint(expectedLength, 10))
 
-	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Key: digest, Writer: w}); err != nil {
+	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Key: b.computeKey(digest), Writer: w}); err != nil {
 		w.Header().Del("Content-Length") // unset Content-Length on errors
 
 		var blobNotFound *storage.ErrBlobNotFound
@@ -127,6 +127,7 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 	result, err := b.driver.PutPayload(r.Context(), &storage.PutRequest{
 		Metadata:      metadata,
 		Data:          r.Body,
+		Key:           b.computeKey(digest),
 		Digest:        digest,
 		ContentLength: contentLength,
 	})
@@ -150,4 +151,8 @@ func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode i
 		_, _ = w.Write([]byte(err.Error()))
 	}
 	return
+}
+
+func (b *blobHandler) computeKey(digest string) string {
+	return fmt.Sprintf("blobs/%s", digest)
 }

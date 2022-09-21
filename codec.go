@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -55,17 +54,6 @@ func WithURL(url string) Option {
 	return applier(func(c *Codec) error {
 		c.url = url
 		return nil
-	})
-}
-
-// WithEncodeVersion sets the LPS version for encoding payloads.
-func WithEncodeVersion(version string) Option {
-	return applier(func(c *Codec) error {
-		if version == "v1" || version == "v2" {
-			c.version = version
-			return nil
-		}
-		return errors.Errorf("'%s' is an unkown LPS server version", version)
 	})
 }
 

@@ -26,9 +26,9 @@ type Validatable interface {
 type PutRequest struct {
 	Metadata      map[string][]byte
 	Data          io.Reader
+	Key           string
 	Digest        string
 	ContentLength uint64
-	Prefix        string
 }
 
 type PutResponse struct {
@@ -43,8 +43,4 @@ type GetRequest struct {
 
 type GetResponse struct {
 	ContentLength uint64
-}
-
-func ComputeKey(digest string) string {
-	return fmt.Sprintf("blobs/%s", digest)
 }

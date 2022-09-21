@@ -142,6 +142,7 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 	result, err := b.driver.PutPayload(r.Context(), &storage.PutRequest{
 		Metadata:      metadata,
 		Data:          tee,
+		Key:           b.computeKey(digestParam),
 		Digest:        digestParam,
 		ContentLength: contentLength,
 	})
@@ -187,4 +188,8 @@ func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode i
 		_, _ = w.Write([]byte(err.Error()))
 	}
 	return
+}
+
+func (b *blobHandler) computeKey(digest string) string {
+	return fmt.Sprintf("blobs/%s", digest)
 }

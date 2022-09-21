@@ -56,7 +56,7 @@ func TestV1Codec(t *testing.T) {
 						"encoding":                 []byte("json/plain"),
 						"temporal.io/remote-codec": []byte("v1"),
 					},
-					Data: []byte("{\"metadata\":{\"baz\":\"cXV4\",\"foo\":\"YmFy\"},\"size\":59,\"digest\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\",\"location\":\"\",\"key\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\"}"),
+					Data: []byte("{\"metadata\":{\"baz\":\"cXV4\",\"foo\":\"YmFy\"},\"size\":59,\"digest\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\",\"location\":\"\",\"key\":\"blobs/sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\"}"),
 				},
 			},
 		},
@@ -73,13 +73,13 @@ func TestV1Codec(t *testing.T) {
 						"encoding":                 []byte("json/plain"),
 						"temporal.io/remote-codec": []byte("v1"),
 					},
-					Data: []byte("{\"metadata\":null,\"size\":52,\"digest\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\",\"location\":\"\",\"key\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\"}"),
+					Data: []byte("{\"metadata\":null,\"size\":52,\"digest\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\",\"location\":\"\",\"key\":\"blobs/sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\"}"),
 				},
 			},
 		},
 	}
 
-	s, c, _ := setUp(t, "v1")
+	s, c, _ := setUp(t)
 	defer s.Close()
 
 	for _, scenario := range testCase {
@@ -88,7 +88,7 @@ func TestV1Codec(t *testing.T) {
 			if err != nil {
 				require.NoError(t, err)
 			}
-			require.Equal(t, scenario.encodedPayload, actualEncodedPayload)
+			require.Equal(t, scenario.encodedPayload[0].Data, actualEncodedPayload[0].Data)
 
 			actualPayload, err := c.Decode(scenario.encodedPayload)
 			require.NoError(t, err)
@@ -139,7 +139,7 @@ func TestV2Codec(t *testing.T) {
 						"encoding":                 []byte("json/plain"),
 						"temporal.io/remote-codec": []byte("v2"),
 					},
-					Data: []byte("{\"metadata\":{\"baz\":\"cXV4\",\"foo\":\"YmFy\"},\"size\":59,\"digest\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\",\"location\":\"\",\"key\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\"}"),
+					Data: []byte("{\"metadata\":{\"baz\":\"cXV4\",\"foo\":\"YmFy\"},\"size\":59,\"digest\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\",\"location\":\"\",\"key\":\"blobs/sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\"}"),
 				},
 			},
 		},
@@ -156,13 +156,13 @@ func TestV2Codec(t *testing.T) {
 						"encoding":                 []byte("json/plain"),
 						"temporal.io/remote-codec": []byte("v2"),
 					},
-					Data: []byte("{\"metadata\":null,\"size\":52,\"digest\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\",\"location\":\"\",\"key\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\"}"),
+					Data: []byte("{\"metadata\":null,\"size\":52,\"digest\":\"sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\",\"location\":\"\",\"key\":\"blobs/sha256:62c5b63b2e7bccbddd931c896593b25fbab2ea1c12b0e1fb34ca083536c2c066\"}"),
 				},
 			},
 		},
 	}
 
-	s, c, _ := setUp(t, "v2")
+	s, c, _ := setUp(t)
 	defer s.Close()
 
 	for _, scenario := range testCase {
@@ -184,7 +184,7 @@ func TestV2Codec(t *testing.T) {
 }
 
 func TestDecodeExistingV1Payload(t *testing.T) {
-	s, c, d := setUp(t, "v1")
+	s, c, d := setUp(t)
 	defer s.Close()
 
 	encodedPayload := &common.Payload{
@@ -204,6 +204,7 @@ func TestDecodeExistingV1Payload(t *testing.T) {
 	}
 
 	put := storage.PutRequest{
+		Key:           "blobs/sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c",
 		Digest:        "sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c",
 		ContentLength: uint64(len(string(expectedPayload.Data))),
 		Data:          strings.NewReader(string(expectedPayload.Data)),
@@ -216,65 +217,7 @@ func TestDecodeExistingV1Payload(t *testing.T) {
 	require.Equal(t, []*common.Payload{expectedPayload}, actualPayload)
 }
 
-func TestNewCodecWithEncodeVersion(t *testing.T) {
-	s := httptest.NewServer(server.NewHttpHandler(&memory.Driver{}))
-	defer s.Close()
-
-	testCase := []struct {
-		name         string
-		url          string
-		version      string
-		expectsError bool
-	}{
-		{
-			name:         "no version",
-			url:          s.URL,
-			version:      "",
-			expectsError: true,
-		},
-		{
-			name:         "v1",
-			url:          s.URL,
-			version:      "v1",
-			expectsError: false,
-		},
-		{
-			name:         "v2",
-			url:          s.URL,
-			version:      "v2",
-			expectsError: false,
-		},
-		{
-			name:         "unknown version",
-			url:          s.URL,
-			expectsError: true,
-		},
-		{
-			name:         "no prefix",
-			url:          s.URL,
-			expectsError: true,
-		},
-	}
-
-	for _, scenario := range testCase {
-		t.Run(scenario.name, func(t *testing.T) {
-			c, err := codec.New(
-				codec.WithURL(s.URL),
-				codec.WithHTTPClient(s.Client()),
-				codec.WithEncodeVersion(scenario.version),
-			)
-			if scenario.expectsError {
-				require.Error(t, err)
-				require.Nil(t, c)
-			} else {
-				require.NoError(t, err)
-				require.NotNil(t, c)
-			}
-		})
-	}
-}
-
-func setUp(t *testing.T, version string) (*httptest.Server, *codec.Codec, storage.Driver) {
+func setUp(t *testing.T) (*httptest.Server, *codec.Codec, storage.Driver) {
 	// Create test remote codec service
 	d := &memory.Driver{}
 	s := httptest.NewServer(server.NewHttpHandler(d))
@@ -283,7 +226,6 @@ func setUp(t *testing.T, version string) (*httptest.Server, *codec.Codec, storag
 	c, err := codec.New(
 		codec.WithURL(s.URL),
 		codec.WithHTTPClient(s.Client()),
-		codec.WithEncodeVersion(version),
 		codec.WithMinBytes(32),
 	)
 	if err != nil {

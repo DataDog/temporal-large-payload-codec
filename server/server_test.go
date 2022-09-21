@@ -16,9 +16,11 @@ import (
 func TestGetBlobV1(t *testing.T) {
 	driver := &memory.Driver{}
 	testPayloadBytes := []byte("hello world")
-	putResponse, err := driver.PutPayload(context.Background(), &storage.PutRequest{
+	testDigest := "sha256:test"
+	_, err := driver.PutPayload(context.Background(), &storage.PutRequest{
 		Data:          bytes.NewReader(testPayloadBytes),
-		Digest:        "sha256:test",
+		Key:           "blobs/sha256:test",
+		Digest:        testDigest,
 		ContentLength: uint64(len(testPayloadBytes)),
 	})
 
@@ -108,7 +110,7 @@ func TestGetBlobV1(t *testing.T) {
 				"X-Payload-Expected-Content-Length": "10",
 			},
 			queryParams: map[string]string{
-				"digest": putResponse.Key,
+				"digest": "sha256:test",
 			},
 			want:       `hello world`,
 			statusCode: http.StatusOK,
@@ -135,8 +137,8 @@ func TestGetBlobV1(t *testing.T) {
 			handler := NewHttpHandler(driver)
 			handler.ServeHTTP(responseRecorder, request)
 
-			require.Equal(t, scenario.statusCode, responseRecorder.Code)
-			require.Equal(t, scenario.want, responseRecorder.Body.String())
+			assert.Equal(t, scenario.statusCode, responseRecorder.Code)
+			assert.Equal(t, scenario.want, responseRecorder.Body.String())
 		})
 	}
 }
@@ -146,6 +148,7 @@ func TestGetBlobV2(t *testing.T) {
 	testPayloadBytes := []byte("hello world")
 	putResponse, err := driver.PutPayload(context.Background(), &storage.PutRequest{
 		Data:          bytes.NewReader(testPayloadBytes),
+		Key:           "blobs/sha256:3b336ba10c19d14d5e741d7b76957bb88620a282d92aac23e2d81c2393f1451d",
 		Digest:        "sha256:3b336ba10c19d14d5e741d7b76957bb88620a282d92aac23e2d81c2393f1451d",
 		ContentLength: uint64(len(testPayloadBytes)),
 	})

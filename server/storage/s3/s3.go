@@ -56,7 +56,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 	w := sequentialWriterAt{w: r.Writer}
 	numBytes, err := d.downloader.Download(ctx, &w, &s3.GetObjectInput{
 		Bucket: &d.bucket,
-		Key:    aws.String(storage.ComputeKey(r.Key)),
+		Key:    aws.String(r.Key),
 	})
 	if err != nil {
 		var nsk *s3types.NoSuchKey
@@ -74,7 +74,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
-	key := aws.String(storage.ComputeKey(r.Digest))
+	key := aws.String(r.Key)
 	_, err := d.uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:        &d.bucket,
 		Key:           key,

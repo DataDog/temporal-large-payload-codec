@@ -29,10 +29,10 @@ func (d *Driver) PutPayload(_ context.Context, request *storage.PutRequest) (*st
 	if d.blobs == nil {
 		d.blobs = make(map[string][]byte)
 	}
-	d.blobs[request.Digest] = b
+	d.blobs[request.Key] = b
 
 	return &storage.PutResponse{
-		Key: request.Digest,
+		Key: request.Key,
 	}, nil
 }
 
