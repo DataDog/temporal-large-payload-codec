@@ -149,12 +149,23 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tee := io.TeeReader(r.Body, hasher)
 	key, err := b.computeKey(namespaceParam, digestParam, temporalMetadata)
 	if err != nil {
 		b.handleError(w, err, http.StatusBadRequest)
 		return
 	}
+
+	existResponse, err := b.driver.ExistPayload(r.Context(), &storage.ExistRequest{Key: key})
+	if err != nil {
+		b.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+	if existResponse.Exists {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	tee := io.TeeReader(r.Body, hasher)
 	result, err := b.driver.PutPayload(r.Context(), &storage.PutRequest{
 		Data:          tee,
 		Key:           key,

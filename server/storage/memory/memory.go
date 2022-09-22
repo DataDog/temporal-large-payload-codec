@@ -52,3 +52,14 @@ func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) (*st
 
 	return nil, &storage.ErrBlobNotFound{}
 }
+
+func (d *Driver) ExistPayload(_ context.Context, request *storage.ExistRequest) (*storage.ExistResponse, error) {
+	d.mux.RLock()
+	defer d.mux.RUnlock()
+
+	_, ok := d.blobs[request.Key]
+
+	return &storage.ExistResponse{
+		Exists: ok,
+	}, nil
+}

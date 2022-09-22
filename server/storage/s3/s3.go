@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 	"io"
 )
 
@@ -30,7 +31,9 @@ func (s *sequentialWriterAt) WriteAt(p []byte, _ int64) (n int, err error) {
 }
 
 func New(config *Config) *Driver {
-	cli := s3.NewFromConfig(config.Config)
+	cli := s3.NewFromConfig(config.Config, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
 	return &Driver{
 		client: cli,
 		uploader: manager.NewUploader(cli, func(u *manager.Uploader) {
@@ -87,6 +90,29 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 
 	return &storage.PutResponse{
 		Key: r.Key,
+	}, nil
+}
+
+func (d *Driver) ExistPayload(ctx context.Context, r *storage.ExistRequest) (*storage.ExistResponse, error) {
+	_, err := d.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: &d.bucket,
+		Key:    &r.Key,
+	})
+
+	exists := true
+	if err != nil {
+		// I would expect the API to return s3types.NoSuchKey, but that is not the case.
+		// This might change in upcoming releases.
+		var ae smithy.APIError
+		if errors.As(err, &ae) && ae.ErrorCode() == "NotFound" {
+			exists = false
+		} else {
+			return nil, err
+		}
+	}
+
+	return &storage.ExistResponse{
+		Exists: exists,
 	}, nil
 }
 
