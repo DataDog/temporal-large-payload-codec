@@ -1,23 +1,25 @@
-package memory_test
+package gcs_test
 
 import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
 	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
 
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 )
 
 func TestDriver(t *testing.T) {
-	var (
-		ctx = context.Background()
-		d   = memory.Driver{}
-		buf = bytes.Buffer{}
-	)
+	// To run this test locally comment on the t.Skip and set your bucket name
+	t.Skip("Skipping this test since it only succeeds with Application Default Credentials setup and an actual backing bucket.")
+
+	buf := bytes.Buffer{}
+	ctx := context.Background()
+	d, err := gcs.New(ctx, "<bucket-name>")
+	require.NoError(t, err)
 
 	// Check missing payload
 	resp, err := d.ExistPayload(ctx, &storage.ExistRequest{Key: "sha256:foobar"})

@@ -17,6 +17,7 @@ func (m *ErrBlobNotFound) Error() string {
 type Driver interface {
 	PutPayload(context.Context, *PutRequest) (*PutResponse, error)
 	GetPayload(context.Context, *GetRequest) (*GetResponse, error)
+	ExistPayload(context.Context, *ExistRequest) (*ExistResponse, error)
 }
 
 type Validatable interface {
@@ -42,4 +43,12 @@ type GetRequest struct {
 
 type GetResponse struct {
 	ContentLength uint64
+}
+
+type ExistRequest struct {
+	Key string
+}
+
+type ExistResponse struct {
+	Exists bool
 }

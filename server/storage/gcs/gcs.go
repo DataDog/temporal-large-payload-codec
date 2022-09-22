@@ -52,8 +52,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
-	path := r.Key
-	o := d.client.Bucket(d.bucket).Object(path)
+	o := d.client.Bucket(d.bucket).Object(r.Key)
 
 	// Upload an object with storage.Writer.
 	wc := o.NewWriter(ctx)
@@ -65,7 +64,25 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 		return nil, fmt.Errorf("Writer.Close: %v", err)
 	}
 	return &storage.PutResponse{
-		Key: path,
+		Key: r.Key,
+	}, nil
+}
+
+func (d *Driver) ExistPayload(ctx context.Context, r *storage.ExistRequest) (*storage.ExistResponse, error) {
+	o := d.client.Bucket(d.bucket).Object(r.Key)
+
+	exists := true
+	_, err := o.Attrs(ctx)
+	if err != nil {
+		if errors.Is(err, gcs.ErrObjectNotExist) {
+			exists = false
+		} else {
+			return nil, err
+		}
+	}
+
+	return &storage.ExistResponse{
+		Exists: exists,
 	}, nil
 }
 
