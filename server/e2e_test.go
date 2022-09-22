@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DataDog/temporalite/temporaltest"
+	"github.com/temporalio/temporalite/temporaltest"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
