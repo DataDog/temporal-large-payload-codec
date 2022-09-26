@@ -52,3 +52,7 @@ func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) (*st
 
 	return nil, &storage.ErrBlobNotFound{}
 }
+
+func (d *Driver) DeletePayload(_ context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
+	panic("todo")
+}

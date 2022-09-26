@@ -69,6 +69,10 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 	}, nil
 }
 
+func (d *Driver) DeletePayload(_ context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
+	panic("todo")
+}
+
 func (d *Driver) Validate(ctx context.Context) error {
 	bucketHandle := d.client.Bucket(d.bucket)
 	if _, err := bucketHandle.Attrs(ctx); err != nil {
