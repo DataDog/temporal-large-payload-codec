@@ -54,5 +54,11 @@ func (d *Driver) GetPayload(_ context.Context, request *storage.GetRequest) (*st
 }
 
 func (d *Driver) DeletePayload(_ context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
-	panic("todo")
+	d.mux.Lock()
+	defer d.mux.Unlock()
+
+	for _, k := range request.Keys {
+		delete(d.blobs, k)
+	}
+	return &storage.DeleteResponse{}, nil
 }

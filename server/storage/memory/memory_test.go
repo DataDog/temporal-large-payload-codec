@@ -51,4 +51,17 @@ func TestDriver_PutPayload(t *testing.T) {
 	if string(b) != string(testPayloadBytes) {
 		t.Errorf("expected payload data %q, got %q", testPayloadBytes, b)
 	}
+
+	// Delete the payload 
+	_, err = d.DeletePayload(ctx, &storage.DeleteRequest{
+		Keys: []string{"sha256:test"},
+	}) 
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = d.GetPayload(ctx, &storage.GetRequest{Digest: "sha256:test", Writer: &buf})
+	if err == nil {
+		t.Errorf("expected payload to be deleted")
+	}
 }
