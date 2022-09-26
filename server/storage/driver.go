@@ -18,6 +18,7 @@ type Driver interface {
 	PutPayload(context.Context, *PutRequest) (*PutResponse, error)
 	GetPayload(context.Context, *GetRequest) (*GetResponse, error)
 	ExistPayload(context.Context, *ExistRequest) (*ExistResponse, error)
+	DeletePayload(context.Context, *DeleteRequest) (*DeleteResponse, error)
 }
 
 type Validatable interface {
@@ -51,4 +52,11 @@ type ExistRequest struct {
 
 type ExistResponse struct {
 	Exists bool
+}
+
+type DeleteRequest struct {
+	Key string
+}
+
+type DeleteResponse struct {
 }

@@ -63,3 +63,7 @@ func (d *Driver) ExistPayload(_ context.Context, request *storage.ExistRequest) 
 		Exists: ok,
 	}, nil
 }
+
+func (d *Driver) DeletePayload(_ context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
+	panic("todo")
+}
