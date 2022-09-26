@@ -71,6 +71,14 @@ func TestS3Driver(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, b, testPayloadBytes)
 
+	// Delete the payload
+	_, err = s3Driver.DeletePayload(ctx, &storage.DeleteRequest{Key: putResponse.Key})
+	require.NoError(t, err)
+
+	// Ensure the payload was deleted
+	resp, err = s3Driver.ExistPayload(ctx, &storage.ExistRequest{Key: putResponse.Key})
+	require.False(t, resp.Exists)
+
 	time.Sleep(1 * time.Second)
 }
 
