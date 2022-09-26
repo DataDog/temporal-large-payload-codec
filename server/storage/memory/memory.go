@@ -65,5 +65,9 @@ func (d *Driver) ExistPayload(_ context.Context, request *storage.ExistRequest) 
 }
 
 func (d *Driver) DeletePayload(_ context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
-	panic("todo")
+	d.mux.Lock()
+	defer d.mux.Unlock()
+
+	delete(d.blobs, request.Key)
+	return &storage.DeleteResponse{}, nil
 }
