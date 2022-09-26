@@ -69,8 +69,17 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 	}, nil
 }
 
-func (d *Driver) DeletePayload(_ context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
-	panic("todo")
+func (d *Driver) DeletePayload(ctx context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
+	// For massive deletions we may want to resort to updating Object Lifecycle Policies to 
+	// 0 days
+	for _, key := range request.Keys {
+		o := d.client.Bucket(d.bucket).Object(key)
+		if err := o.Delete(ctx); err != nil {
+			return nil , err
+		}
+	}
+
+	return &storage.DeleteResponse{}, nil
 }
 
 func (d *Driver) Validate(ctx context.Context) error {
