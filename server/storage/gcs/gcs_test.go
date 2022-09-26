@@ -56,4 +56,12 @@ func TestDriver(t *testing.T) {
 	b, err := io.ReadAll(&buf)
 	require.NoError(t, err)
 	require.Equal(t, b, testPayloadBytes)
+
+	// Delete the payload
+	_, err = d.DeletePayload(ctx, &storage.DeleteRequest{Key: putResponse.Key})
+	require.NoError(t, err)
+
+	// Ensure the payload was deleted
+	resp, err = d.ExistPayload(ctx, &storage.ExistRequest{Key: putResponse.Key})
+	require.False(t, resp.Exists)
 }
