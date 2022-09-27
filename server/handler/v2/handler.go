@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/DataDog/temporal-large-payload-codec/logging"
 	"hash"
 	"io"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/DataDog/temporal-large-payload-codec/logging"
 
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
@@ -48,6 +49,7 @@ func NewHandler(driver storage.Driver, logger logging.Logger) http.Handler {
 	})
 	r.HandleFunc("/v2/blobs/put", handler.putBlob)
 	r.HandleFunc("/v2/blobs/get", handler.getBlob)
+	r.HandleFunc("/v2/blobs/delete", handler.deleteBlob)
 
 	return r
 }
@@ -187,6 +189,25 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		return
 	}
+}
+
+func (b *blobHandler) deleteBlob(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		b.handleError(w, nil, http.StatusMethodNotAllowed)
+		return
+	}
+
+	keyParam := r.URL.Query().Get("key")
+	if keyParam == "" {
+		b.handleError(w, errors.New("key query parameter is required"), http.StatusBadRequest)
+		return
+	}
+
+	if _, err := b.driver.DeletePayload(r.Context(), &storage.DeleteRequest{Key: keyParam}); err != nil {
+		w.Header().Del("Content-Length") // unset Content-Length on errors
+		b.handleError(w, err, http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (b *blobHandler) decodeTemporalMetadata(r *http.Request) (map[string][]byte, error) {
