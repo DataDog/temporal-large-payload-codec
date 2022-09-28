@@ -55,6 +55,14 @@ Architecturally, the Large Payload Service is an HTTP server offering the follow
   - `key` specifying the key for the payload to retrieve.
 
 
+- `/v2/blobs/delete`: Download endpoint expecting a `DELETE` request.
+
+  **Query parameters**:
+  - `key` specifying the key for the payload to retrieve.
+
+  Removes the payload with the specified key. If the key does not exist the Large Payload Server will
+  return response status 200, not an error code.
+
 ## Usage
 
 This repository does not provide any prebuilt binaries or images.
