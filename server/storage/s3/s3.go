@@ -116,8 +116,15 @@ func (d *Driver) ExistPayload(ctx context.Context, r *storage.ExistRequest) (*st
 	}, nil
 }
 
-func (d *Driver) DeletePayload(_ context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
-	panic("todo")
+func (d *Driver) DeletePayload(ctx context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
+	_, err := d.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: &d.bucket,
+		Key:    &request.Key,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &storage.DeleteResponse{}, nil
 }
 
 func (d *Driver) Validate(ctx context.Context) error {
