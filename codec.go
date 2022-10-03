@@ -246,7 +246,8 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != http.StatusCreated {
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("server returned status code %d: %s", resp.StatusCode, respBody)
 	}
 
