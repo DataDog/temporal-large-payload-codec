@@ -162,6 +162,12 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 	}
 	if existResponse.Exists {
 		w.WriteHeader(http.StatusOK)
+		r := storage.PutResponse{
+			Key: key,
+		}
+		if err := json.NewEncoder(w).Encode(r); err != nil {
+			b.handleError(w, err, http.StatusInternalServerError)
+		}
 		return
 	}
 

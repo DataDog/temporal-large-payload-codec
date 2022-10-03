@@ -172,6 +172,32 @@ func TestV2Codec(t *testing.T) {
 	}
 }
 
+func Test_the_same_payload_can_be_encoded_multiple_times(t *testing.T) {
+	s, c, _ := setUp(t, "v2")
+	defer s.Close()
+
+	payload := common.Payload{
+		Metadata: map[string][]byte{
+			"foo":                     []byte("bar"),
+			"baz":                     []byte("qux"),
+			"remote-codec/key-prefix": []byte("1234"),
+		},
+		Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+	}
+
+	resp1, err := c.Encode([]*common.Payload{&payload})
+	if err != nil {
+		require.NoError(t, err)
+	}
+
+	resp2, err := c.Encode([]*common.Payload{&payload})
+	if err != nil {
+		require.NoError(t, err)
+	}
+
+	require.Equal(t, resp1, resp2)
+}
+
 func TestDecodeExistingV1Payload(t *testing.T) {
 	s, c, d := setUp(t, "v1")
 	defer s.Close()
