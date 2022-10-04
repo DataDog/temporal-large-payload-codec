@@ -246,6 +246,7 @@ func TestNewCodec(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, client)
+	require.Equal(t, "v2", client.version)
 
 	// missing URL
 	client, err = New(
@@ -283,6 +284,26 @@ func TestNewCodec(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	require.Equal(t, 128000, client.minBytes) // 128KB
+
+	// v1
+	client, err = New(
+		WithURL(s.URL),
+		WithHTTPClient(s.Client()),
+		WithNamespace("test"),
+		WithVersion("v1"),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, client)
+	require.Equal(t, "v1", client.version)
+
+	// invalid version
+	client, err = New(
+		WithURL(s.URL),
+		WithHTTPClient(s.Client()),
+		WithNamespace("test"),
+		WithVersion("v3"),
+	)
+	require.Error(t, err)
 }
 
 func setUp(t *testing.T, version string) (*httptest.Server, *Codec, storage.Driver) {
