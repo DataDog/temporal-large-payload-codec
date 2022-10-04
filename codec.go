@@ -125,6 +125,14 @@ func WithNamespace(namespace string) Option {
 	})
 }
 
+// WithVersion sets the version of the LPS API to use.
+func WithVersion(version string) Option {
+	return applier(func(c *Codec) error {
+		c.version = version
+		return nil
+	})
+}
+
 // WithHTTPRoundTripper sets custom Transport on the http.Client.
 //
 // This may be used to implement use cases including authentication or tracing.
@@ -171,6 +179,10 @@ func New(opts ...Option) (*Codec, error) {
 
 	if c.version == "" {
 		c.version = "v2"
+	}
+
+	if c.version != "v1" && c.version != "v2" {
+		return nil, fmt.Errorf("invalid codec version: %s", c.version)
 	}
 
 	// Check connectivity
