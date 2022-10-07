@@ -312,7 +312,7 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
-		c.url.JoinPath(c.version).String(),
+		c.url.JoinPath(version).String(),
 		nil,
 	)
 	if err != nil {
