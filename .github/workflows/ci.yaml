@@ -29,3 +29,11 @@ jobs:
         run: |
           gofmt -l .
           test -z $(gofmt -l .)
+
+      - name: Validate 3rd party dependencies
+        run: |
+          go run internal/licensecheck/main.go
+          if ! git diff --quiet LICENSE-3rdparty.csv; then
+            echo "LICENSE-3rdparty.csv is out of date. Please run 'go run internal/licensecheck/main.go' and commit the changes."
+            exit 1
+          fi
