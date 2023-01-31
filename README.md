@@ -144,6 +144,12 @@ go test ./...
 gofmt -l -w .
 ```
 
+### Update the 3rdparty dependencies
+
+```sh
+go run internal/licensecheck/main.go
+```
+
 ## CI
 
 CI is configured via a GitHub Workflow in [.github/workflows/ci.yaml](.github/workflows/ci.yaml).
