@@ -11,10 +11,6 @@ In essence, the Large Payload Service implements a [content addressed storage](h
 - [API](#api)
 - [Usage](#usage)
 - [Development](#development)
-  * [Build the Source](#build-the-source)
-  * [Run the Tests](#run-the-tests)
-  * [Format the Code](#format-the-code)
-- [CI](#ci)
 
 <!-- tocstop -->
 
@@ -122,39 +118,4 @@ temporalClient, _ := router.NewClient(opts)
 
 ## Development
 
-Prerequisite for developing on this code base is an installed [Golang 1.18](https://go.dev/doc/install) environment.
-
-### Build the Source
-
-```sh
-go build -o lps cmd/server/main.go
-```
-
-### Run the Tests
-
-To run the unit tests:
-
-```sh
-go test ./...
-```
-
-### Format the Code
-
-```sh
-gofmt -l -w .
-```
-
-### Update the 3rdparty dependencies
-
-```sh
-go run internal/licensecheck/main.go
-```
-
-## CI
-
-CI is configured via a GitHub Workflow in [.github/workflows/ci.yaml](.github/workflows/ci.yaml).
-You can test and run the pipeline locally by installed `[act](https://github.com/nektos/act)` and running:
-
-```shell
-act pull_request
-```
+Refer to [CONTRIBUTING.md](./CONTRIBUTING.md) for instructions on how to build and test the Large Payload Service and for general contributing guidelines.
