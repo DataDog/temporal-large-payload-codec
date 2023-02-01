@@ -37,3 +37,10 @@ jobs:
             echo "LICENSE-3rdparty.csv is out of date. Please run 'go run ./internal/tools/licensecheck' and commit the changes."
             exit 1
           fi
+
+      - name: Validate Go header files
+        run: |
+          if ! go run ./internal/tools/copyright -verifyOnly; then
+            echo "Required Go header(s) Missing. Please run 'go run ./internal/tools/copyright' and commit the changes."
+            exit 1
+          fi          

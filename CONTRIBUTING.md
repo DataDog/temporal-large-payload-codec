@@ -66,6 +66,14 @@ To verify that this file is up to date execute:
 go run ./internal/tools/licensecheck
 ```
 
+### Go file headers
+
+To ensure all Go files contain the correct license header, execute:
+
+```sh
+go run ./internal/tools/copyright
+```
+
 ## CI
 
 CI is configured via a GitHub Workflow in [.github/workflows/ci.yaml](.github/workflows/ci.yaml).
