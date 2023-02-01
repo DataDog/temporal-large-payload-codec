@@ -63,7 +63,7 @@ The license, origin, and copyright of all third party code is tracked in `LICENS
 To verify that this file is up to date execute:
 
 ```sh
-go run ./internal/licensecheck
+go run ./internal/tools/licensecheck
 ```
 
 ## CI
