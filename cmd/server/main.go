@@ -13,10 +13,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/DataDog/temporal-large-payload-codec/logging"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
-	"github.com/pkg/errors"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 

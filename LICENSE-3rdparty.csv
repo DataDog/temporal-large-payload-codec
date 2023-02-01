@@ -3,6 +3,11 @@ cloud.google.com/go/compute/metadata,https://github.com/googleapis/google-cloud-
 cloud.google.com/go/iam,https://github.com/googleapis/google-cloud-go,Apache-2.0,
 cloud.google.com/go/internal,https://github.com/googleapis/google-cloud-go,Apache-2.0,
 cloud.google.com/go/storage,https://github.com/googleapis/google-cloud-go,Apache-2.0,
+github.com/Azure/azure-sdk-for-go/sdk/azcore,https://github.com/Azure/azure-sdk-for-go,MIT,
+github.com/Azure/azure-sdk-for-go/sdk/azidentity,https://github.com/Azure/azure-sdk-for-go,MIT,
+github.com/Azure/azure-sdk-for-go/sdk/internal,https://github.com/Azure/azure-sdk-for-go,MIT,
+github.com/Azure/azure-sdk-for-go/sdk/storage/azblob,https://github.com/Azure/azure-sdk-for-go,MIT,
+github.com/AzureAD/microsoft-authentication-library-for-go/apps,https://github.com/AzureAD/microsoft-authentication-library-for-go,MIT,
 github.com/aws/aws-sdk-go-v2,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/config,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/credentials,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
@@ -22,6 +27,7 @@ github.com/aws/smithy-go,https://github.com/aws/smithy-go,Apache-2.0,
 github.com/emirpasic/gods,https://github.com/emirpasic/gods,BSD-2-Clause,Emir Pasic
 github.com/go-logr/logr,https://github.com/go-logr/logr,Apache-2.0,
 github.com/gogo/protobuf,https://github.com/gogo/protobuf,BSD-3-Clause,The GoGo Authors
+github.com/golang-jwt/jwt/v4,https://github.com/golang-jwt/jwt,MIT,Dave Grijalva
 github.com/golang/groupcache/lru,https://github.com/golang/groupcache,Apache-2.0,
 github.com/golang/protobuf,https://github.com/golang/protobuf,BSD-3-Clause,The Go Authors
 github.com/google/go-cmp/cmp,https://github.com/google/go-cmp,BSD-3-Clause,The Go Authors
@@ -37,7 +43,9 @@ github.com/googleapis/go-type-adapters/adapters,https://github.com/googleapis/go
 github.com/jbenet/go-context/io,https://github.com/jbenet/go-context,MIT,Juan Batiz-Benet
 github.com/jmespath/go-jmespath,https://github.com/jmespath/go-jmespath,Apache-2.0,James Saryerwinnie
 github.com/kevinburke/ssh_config,https://github.com/kevinburke/ssh_config,MIT,Kevin Burke
+github.com/kylelemons/godebug,https://github.com/kylelemons/godebug,Apache-2.0,
 github.com/mitchellh/go-homedir,https://github.com/mitchellh/go-homedir,MIT,Mitchell Hashimoto
+github.com/pkg/browser,https://github.com/pkg/browser,BSD-2-Clause,Dave Cheney <dave@cheney.net>
 github.com/pkg/errors,https://github.com/pkg/errors,BSD-2-Clause,Dave Cheney <dave@cheney.net>
 github.com/sergi/go-diff/diffmatchpatch,https://github.com/sergi/go-diff,MIT,The go-diff Authors
 github.com/src-d/gcfg,https://github.com/src-d/gcfg,BSD-3-Clause,Péter Surányi. Portions Copyright (c) 2009 The Go
