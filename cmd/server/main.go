@@ -8,18 +8,21 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/DataDog/temporal-large-payload-codec/logging"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
-	"github.com/pkg/errors"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
+
+	"github.com/DataDog/temporal-large-payload-codec/logging"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
+
 	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/DataDog/temporal-large-payload-codec/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/azure"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/s3"
 )
@@ -93,6 +96,27 @@ func createDriver(ctx context.Context, driverName string) (storage.Driver, error
 
 		var err error
 		driver, err = gcs.New(ctx, bucket)
+		if err != nil {
+			return nil, err
+		}
+	case "azure":
+		log.Printf("creating %s driver", driverName)
+		bucket, set := os.LookupEnv("BUCKET")
+		if !set {
+			return nil, errors.New("BUCKET environment variable not set")
+		}
+
+		storageAccount, set := os.LookupEnv("AZURE_STORAGE_ACCOUNT_NAME")
+		if !set {
+			return nil, errors.New("AZURE_STORAGE_ACCOUNT_NAME environment variable not set")
+		}
+		serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", storageAccount)
+
+		var err error
+		driver, err = azure.New(&azure.Config{
+			Container:  bucket,
+			ServiceURL: serviceURL,
+		})
 		if err != nil {
 			return nil, err
 		}
