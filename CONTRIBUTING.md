@@ -1,6 +1,6 @@
 # Develop Large Payload Service (LPS)
 
-This doc is for contributors to  Large Payload Service (hopefully that's you!)
+This doc is for contributors to Large Payload Service (hopefully that's you!).
 
 <!-- toc -->
 
@@ -12,7 +12,9 @@ This doc is for contributors to  Large Payload Service (hopefully that's you!)
   * [Run the Tests](#run-the-tests)
   * [Format the Code](#format-the-code)
   * [Third party code](#third-party-code)
+  * [Go file headers](#go-file-headers)
 - [CI](#ci)
+- [Releasing](#releasing)
 - [Filing issues](#filing-issues)
 - [Contributing patches](#contributing-patches)
 
@@ -60,7 +62,7 @@ gofmt -l -w .
 ### Third party code
 
 The license, origin, and copyright of all third party code is tracked in `LICENSE-3rdparty.csv`.
-To verify that this file is up to date execute:
+To verify that this file is up-to-date execute:
 
 ```sh
 go run ./internal/tools/licensecheck
@@ -81,6 +83,20 @@ You can test and run the pipeline locally by installed `[act](https://github.com
 
 ```shell
 act pull_request
+```
+
+## Releasing
+
+The release process is automated via [goreleaser](https://goreleaser.com/) and executed via the GitHub Workflow in [.github/workflows/release.yaml](.github/workflows/release.yaml).
+To cut a release create a tag locally and push it to GitHub.
+The tag should be a valid [semantic version](https://semver.org/), prefixed with 'v', eg _v1.0.0_.
+
+To release v1.0.0 you would run:
+
+```shell
+```sh
+git tag -a v1.0.0
+git push --tags origin HEAD
 ```
 
 ## Filing issues
