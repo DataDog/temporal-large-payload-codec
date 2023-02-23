@@ -2,12 +2,12 @@
 
 > ⚠️ This repository has been open sourced in order to help further discussion in the Temporal community about a proposal for official Temporal large payloads support.
 >
-> We welcome experimentation and feedback, but please do not use in production. We make no guarantees about backwards compatibility of codecs, the http interface, or storage drivers. If and when the upstream Temporal project includes support for large payloads, this repository will not be maintained.
+> We welcome experimentation and feedback, but please do not use in production. We make no guarantees about backwards compatibility of codecs, the HTTP interface, or storage drivers. If and when the upstream Temporal project includes support for large payloads, this repository will not be maintained.
 
-This repository contains an http service and accompanying Temporal [Payload Codec](https://docs.temporal.io/security#payload-codec) which allows Temporal clients to automatically persist large payloads outside of workflow histories.
+This repository contains a HTTP service and accompanying Temporal [Payload Codec](https://docs.temporal.io/security#payload-codec) which allows Temporal clients to automatically persist large payloads outside of workflow histories.
 
 Temporal limits payload size to 4MB.
-The Large Payload Codec allows Temporal clients to read and write payloads larger than this limit by transparently storing and retrieving them via an http service backed by cloud storage. In essence, the Large Payload Service implements a [content addressed storage](https://en.wikipedia.org/wiki/Content-addressable_storage) (CAS) interface for Temporal payloads.
+The Large Payload Codec allows Temporal clients to read and write payloads larger than this limit by transparently storing and retrieving them via an HTTP service backed by cloud storage. In essence, the Large Payload Service implements a [content addressed storage](https://en.wikipedia.org/wiki/Content-addressable_storage) (CAS) interface for Temporal payloads.
 
 For more details on the motivation, see the talk "Temporal at Datadog" from Replay 2022: https://youtu.be/LxgkAoTSI8Q?t=1686
 
