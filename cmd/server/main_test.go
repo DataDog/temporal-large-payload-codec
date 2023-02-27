@@ -6,13 +6,15 @@ package main
 
 import (
 	"context"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/s3"
-	"github.com/stretchr/testify/require"
-	"os"
-	"testing"
 )
 
 const (

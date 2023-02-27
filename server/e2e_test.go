@@ -7,12 +7,12 @@ package server_test
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"math/rand"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"github.com/temporalio/temporalite/temporaltest"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"

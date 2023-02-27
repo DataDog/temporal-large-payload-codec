@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/DataDog/temporal-large-payload-codec/logging"
 	"hash"
 	"io"
 	"net/http"
@@ -20,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/DataDog/temporal-large-payload-codec/logging"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
