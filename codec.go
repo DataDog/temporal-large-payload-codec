@@ -185,7 +185,7 @@ func New(opts ...Option) (*Codec, error) {
 		c.version = "v2"
 	}
 
-	if c.version != "v1" && c.version != "v2" {
+	if c.version != "v2" {
 		return nil, fmt.Errorf("invalid codec version: %s", c.version)
 	}
 

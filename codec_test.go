@@ -5,93 +5,22 @@
 package codec
 
 import (
-	"context"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
-	"github.com/stretchr/testify/require"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/DataDog/temporal-large-payload-codec/server"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
+	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/common/v1"
+
+	"github.com/DataDog/temporal-large-payload-codec/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 )
 
 const (
 	updateEncodedPayload = false
 )
-
-func TestV1Codec(t *testing.T) {
-	testCase := []struct {
-		name           string
-		payload        common.Payload
-		encodedPayload common.Payload
-	}{
-		{
-			name: "no large payload encoding needed",
-			payload: common.Payload{
-				Metadata: map[string][]byte{
-					"foo": []byte("bar"),
-				},
-				Data: []byte("hello world"),
-			},
-			encodedPayload: common.Payload{
-
-				Metadata: map[string][]byte{
-					"foo": []byte("bar"),
-				},
-				Data: []byte("hello world"),
-			},
-		},
-		{
-			name: "payload exceeds max byte limit",
-			payload: common.Payload{
-				Metadata: map[string][]byte{
-					"foo": []byte("bar"),
-					"baz": []byte("qux"),
-				},
-				Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
-			},
-			encodedPayload: common.Payload{
-
-				Metadata: map[string][]byte{
-					"encoding":                 []byte("json/plain"),
-					"temporal.io/remote-codec": []byte("v1"),
-				},
-				Data: []byte("{\"metadata\":{\"baz\":\"cXV4\",\"foo\":\"YmFy\"},\"size\":59,\"digest\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\",\"key\":\"blobs/sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\"}"),
-			},
-		},
-	}
-
-	s, c, _ := setUp(t, "v1")
-	defer s.Close()
-
-	for _, scenario := range testCase {
-		t.Run(scenario.name, func(t *testing.T) {
-			actualEncodedPayload, err := c.Encode([]*common.Payload{&scenario.payload})
-			if err != nil {
-				require.NoError(t, err)
-			}
-
-			if updateEncodedPayload {
-				toFile(t, actualEncodedPayload[0].Data)
-			}
-
-			// load the encoded payload from file
-			scenario.encodedPayload.Data = fromFile(t)
-
-			require.Equal(t, &scenario.encodedPayload, actualEncodedPayload[0])
-
-			actualPayload, err := c.Decode([]*common.Payload{&scenario.encodedPayload})
-			if err != nil {
-				require.NoError(t, err)
-			}
-			require.Equal(t, &scenario.payload, actualPayload[0])
-		})
-	}
-}
 
 func TestV2Codec(t *testing.T) {
 	testCase := []struct {
@@ -202,41 +131,6 @@ func Test_the_same_payload_can_be_encoded_multiple_times(t *testing.T) {
 	require.Equal(t, resp1, resp2)
 }
 
-func TestDecodeExistingV1Payload(t *testing.T) {
-	s, c, d := setUp(t, "v1")
-	defer s.Close()
-
-	encodedPayload := &common.Payload{
-		Metadata: map[string][]byte{
-			"encoding":                 []byte("json/plain"),
-			"temporal.io/remote-codec": []byte("v1"),
-		},
-		// v1 data does not contain a key field, but only the digest. We are making sure this can still be read
-		Data: []byte("{\"metadata\":{\"baz\":\"cXV4\",\"foo\":\"YmFy\"},\"size\":59,\"digest\":\"sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c\",\"location\":\"\"}"),
-	}
-
-	expectedPayload := &common.Payload{
-		Metadata: map[string][]byte{
-			"foo": []byte("bar"),
-			"baz": []byte("qux"),
-		},
-		Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
-	}
-
-	put := storage.PutRequest{
-		Key:           "blobs/sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c",
-		Digest:        "sha256:041ae008aa23e071b5f04ae1b75847c7b135269239833501f0929b212c95935c",
-		ContentLength: uint64(len(string(expectedPayload.Data))),
-		Data:          strings.NewReader(string(expectedPayload.Data)),
-	}
-	_, err := d.PutPayload(context.Background(), &put)
-	require.NoError(t, err)
-
-	actualPayload, err := c.Decode([]*common.Payload{encodedPayload})
-	require.NoError(t, err)
-	require.Equal(t, []*common.Payload{expectedPayload}, actualPayload)
-}
-
 func TestNewCodec(t *testing.T) {
 	d := &memory.Driver{}
 	s := httptest.NewServer(server.NewHttpHandler(d))
@@ -296,9 +190,7 @@ func TestNewCodec(t *testing.T) {
 		WithNamespace("test"),
 		WithVersion("v1"),
 	)
-	require.NoError(t, err)
-	require.NotNil(t, client)
-	require.Equal(t, "v1", client.version)
+	require.Error(t, err)
 
 	// invalid version
 	client, err = New(
