@@ -54,7 +54,8 @@ func TestV2Codec(t *testing.T) {
 			},
 			encodedPayload: common.Payload{
 				Metadata: map[string][]byte{
-					"encoding":                 []byte("json/plain"),
+					"encoding":                 []byte("json/protobuf"),
+					"messageType":              []byte("RemotePayload"),
 					"temporal.io/remote-codec": []byte("v2"),
 				},
 			},
@@ -70,7 +71,8 @@ func TestV2Codec(t *testing.T) {
 			},
 			encodedPayload: common.Payload{
 				Metadata: map[string][]byte{
-					"encoding":                 []byte("json/plain"),
+					"encoding":                 []byte("json/protobuf"),
+					"messageType":              []byte("RemotePayload"),
 					"temporal.io/remote-codec": []byte("v2"),
 				},
 			},
