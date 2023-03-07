@@ -1,14 +1,18 @@
 [tool.poetry]
-name = "python"
+name = "temporal-large-payload-codec"
 version = "0.1.0"
 description = ""
-authors = ["grantfuhr <grant.fuhr@datadoghq.com>"]
+license = "MIT"
+authors = ["Datadog, Inc"]
 readme = "README.md"
+packages = [{ include = "codec/python" }]
+
 
 [tool.poetry.dependencies]
 python = "^3.9"
 requests = "^2.28.2"
 temporalio = "^1.1.0"
+protobuf = "^4.22.0"
 
 
 [build-system]

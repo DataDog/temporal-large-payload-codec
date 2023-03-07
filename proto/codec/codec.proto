@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package codec;
+
 option go_package = "github.com/DataDog/temporal-large-payload-codec/codec/go/gen";
 
 message RemotePayload {
