@@ -19,6 +19,7 @@ import (
 	"path"
 	"strconv"
 
+	codecpb "github.com/DataDog/temporal-large-payload-codec/codec/go/gen"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
 )
@@ -41,17 +42,6 @@ type Codec struct {
 }
 
 type keyResponse struct {
-	Key string `json:"key"`
-}
-
-type remotePayload struct {
-	// Content of the original payload's Metadata.
-	Metadata map[string][]byte `json:"metadata"`
-	// Number of bytes in the payload Data.
-	Size uint `json:"size"`
-	// Digest of the payload Data, prefixed with the algorithm, e.g. sha256:deadbeef.
-	Digest string `json:"digest"`
-	// The key to retrieve the payload from remote storage.
 	Key string `json:"key"`
 }
 
@@ -272,9 +262,9 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 		return nil, fmt.Errorf("unable to unmarshal put response: %w", err)
 	}
 
-	result, err := converter.GetDefaultDataConverter().ToPayload(remotePayload{
+	result, err := converter.GetDefaultDataConverter().ToPayload(codecpb.RemotePayload{
 		Metadata: payload.GetMetadata(),
-		Size:     uint(len(payload.GetData())),
+		Size:     uint64(len(payload.GetData())),
 		Digest:   digest,
 		Key:      key.Key,
 	})
@@ -308,7 +298,7 @@ func (c *Codec) Decode(payloads []*common.Payload) ([]*common.Payload, error) {
 }
 
 func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, version string) (*common.Payload, error) {
-	var remoteP remotePayload
+	var remoteP codecpb.RemotePayload
 	if err := converter.GetDefaultDataConverter().FromPayload(payload, &remoteP); err != nil {
 		return nil, err
 	}
@@ -326,16 +316,16 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 
 	q := req.URL.Query()
 	if version == "v1" {
-		q.Set("digest", remoteP.Digest)
+		q.Set("digest", remoteP.GetDigest())
 	}
 	if version == "v2" {
-		q.Set("key", remoteP.Key)
+		q.Set("key", remoteP.GetKey())
 	}
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/octet-stream")
 	// TODO: we temporarily need this because we aren't checking object metadata on the server
-	req.Header.Set("X-Payload-Expected-Content-Length", strconv.FormatUint(uint64(remoteP.Size), 10))
+	req.Header.Set("X-Payload-Expected-Content-Length", strconv.FormatUint(uint64(remoteP.GetSize()), 10))
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -354,17 +344,17 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 		return nil, err
 	}
 
-	if uint(len(b)) != remoteP.Size {
-		return nil, fmt.Errorf("wanted object of size %d, got %d", remoteP.Size, len(b))
+	if uint64(len(b)) != remoteP.GetSize() {
+		return nil, fmt.Errorf("wanted object of size %d, got %d", remoteP.GetSize(), len(b))
 	}
 
 	checkSum := hex.EncodeToString(sha2.Sum(nil))
-	if fmt.Sprintf("sha256:%s", checkSum) != remoteP.Digest {
-		return nil, fmt.Errorf("wanted object sha %s, got %s", remoteP.Digest, checkSum)
+	if fmt.Sprintf("sha256:%s", checkSum) != remoteP.GetDigest() {
+		return nil, fmt.Errorf("wanted object sha %s, got %s", remoteP.GetDigest(), checkSum)
 	}
 
 	return &common.Payload{
-		Metadata: remoteP.Metadata,
+		Metadata: remoteP.GetMetadata(),
 		Data:     b,
 	}, nil
 }

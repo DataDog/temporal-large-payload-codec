@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package codec;
+option go_package = "github.com/DataDog/temporal-large-payload-codec/codec/go/gen";
+
+message RemotePayload {
+    // The content of the original payload's metadata
+    map<string,bytes> metadata = 1;
+    // Number of bytes in the original payload's data
+    uint64 size = 2;
+    // Digest of the payload data, prefixed with the algorithm, e.g. sha256:deadbeef
+    string digest = 3;
+    // The key to retrieve the payload from remote storage
+    string key = 4;
+}
