@@ -8,13 +8,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"io"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
-	"io"
+
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
 // Config provides all configuration to create the S3 based driver for LPS.
@@ -85,7 +87,7 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 		Bucket:        &d.bucket,
 		Key:           aws.String(r.Key),
 		Body:          r.Data,
-		ContentLength: int64(r.ContentLength),
+		ContentLength: aws.Int64(int64(r.ContentLength)),
 		StorageClass:  d.storageClass,
 	})
 	if err != nil {
