@@ -9,6 +9,7 @@ github.com/Azure/azure-sdk-for-go/sdk/internal,https://github.com/Azure/azure-sd
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob,https://github.com/Azure/azure-sdk-for-go,MIT,
 github.com/AzureAD/microsoft-authentication-library-for-go/apps,https://github.com/AzureAD/microsoft-authentication-library-for-go,MIT,
 github.com/aws/aws-sdk-go-v2,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
+github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/config,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/credentials,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
@@ -17,13 +18,17 @@ github.com/aws/aws-sdk-go-v2/internal/configsources,https://github.com/aws/aws-s
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/internal/ini,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/internal/sync/singleflight,https://github.com/aws/aws-sdk-go-v2,BSD-3-Clause,The Go Authors
+github.com/aws/aws-sdk-go-v2/internal/v4a,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
+github.com/aws/aws-sdk-go-v2/service/internal/checksum,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/service/s3,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/service/sso,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
+github.com/aws/aws-sdk-go-v2/service/ssooidc,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/aws-sdk-go-v2/service/sts,https://github.com/aws/aws-sdk-go-v2,Apache-2.0,
 github.com/aws/smithy-go,https://github.com/aws/smithy-go,Apache-2.0,
+github.com/aws/smithy-go/internal/sync/singleflight,https://github.com/aws/smithy-go,BSD-3-Clause,The Go Authors
 github.com/emirpasic/gods,https://github.com/emirpasic/gods,BSD-2-Clause,Emir Pasic
 github.com/go-logr/logr,https://github.com/go-logr/logr,Apache-2.0,
 github.com/gogo/protobuf,https://github.com/gogo/protobuf,BSD-3-Clause,The GoGo Authors
