@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -101,6 +102,20 @@ func TestGetBlobV2(t *testing.T) {
 			},
 			queryParams: map[string]string{
 				"key": putResponse.Key,
+			},
+			want:       `hello world`,
+			statusCode: http.StatusOK,
+		},
+		{
+			name:   "Successful retrieval while decoding key",
+			target: "blobs/get",
+			method: http.MethodGet,
+			headers: map[string]string{
+				"Content-Type":                      "application/octet-stream",
+				"X-Payload-Expected-Content-Length": "10",
+			},
+			queryParams: map[string]string{
+				"key": url.QueryEscape(putResponse.Key),
 			},
 			want:       `hello world`,
 			statusCode: http.StatusOK,
