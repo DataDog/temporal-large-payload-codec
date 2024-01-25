@@ -58,13 +58,13 @@ github.com/xanzy/ssh-agent,https://github.com/xanzy/ssh-agent,Apache-2.0,
 go.opencensus.io,https://github.com/census-instrumentation/opencensus-go,Apache-2.0,
 go.temporal.io/api,https://github.com/temporalio/api-go,MIT,Temporal Technologies Inc.
 go.temporal.io/sdk/converter,https://github.com/temporalio/sdk-go,MIT,Temporal Technologies Inc.
-golang.org/x/crypto,https://cs.opensource.google/go/x/crypto/+/v0.1.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/mod/semver,https://cs.opensource.google/go/x/mod/+/v0.7.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/net,https://cs.opensource.google/go/x/net/+/v0.5.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/crypto,https://cs.opensource.google/go/x/crypto/+/v0.9.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/mod/semver,https://cs.opensource.google/go/x/mod/+/v0.8.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/net,https://cs.opensource.google/go/x/net/+/v0.10.0:LICENSE,BSD-3-Clause,The Go Authors
 golang.org/x/oauth2,https://cs.opensource.google/go/x/oauth2/+/fd043fe5:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/sys,https://cs.opensource.google/go/x/sys/+/v0.4.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/text,https://cs.opensource.google/go/x/text/+/v0.6.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/tools,https://cs.opensource.google/go/x/tools/+/v0.5.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/sys,https://cs.opensource.google/go/x/sys/+/v0.8.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/text,https://cs.opensource.google/go/x/text/+/v0.9.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/tools,https://cs.opensource.google/go/x/tools/+/v0.6.0:LICENSE,BSD-3-Clause,The Go Authors
 golang.org/x/xerrors,https://cs.opensource.google/go/x/xerrors/+/65e65417:LICENSE,BSD-3-Clause,The Go Authors
 google.golang.org/api,https://github.com/googleapis/google-api-go-client,BSD-3-Clause,Google Inc.
 google.golang.org/api/internal/third_party/uritemplates,https://github.com/googleapis/google-api-go-client,BSD-3-Clause,Joshua Tacoma

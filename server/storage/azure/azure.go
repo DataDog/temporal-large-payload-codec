@@ -52,7 +52,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 		}
 		return nil, err
 	}
-	numBytes, err := io.Copy(r.Writer, resp.BlobClientDownloadResponse.Body)
+	numBytes, err := io.Copy(r.Writer, resp.Body)
 	if err != nil {
 		return nil, err
 	}
