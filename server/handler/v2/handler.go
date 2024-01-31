@@ -14,6 +14,7 @@ import (
 	"hash"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -90,8 +91,12 @@ func (b *blobHandler) getBlob(w http.ResponseWriter, r *http.Request) {
 		b.handleError(w, errors.New("key query parameter is required"), http.StatusBadRequest)
 		return
 	}
+	key, err := url.QueryUnescape(keyParam)
+	if err != nil {
+		b.handleError(w, fmt.Errorf("key query parameter %s cannot be unescaped: %w", keyParam, err), http.StatusBadRequest)
+	}
 
-	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Key: keyParam, Writer: w}); err != nil {
+	if _, err := b.driver.GetPayload(r.Context(), &storage.GetRequest{Key: key, Writer: w}); err != nil {
 		w.Header().Del("Content-Length") // unset Content-Length on errors
 
 		var blobNotFound *storage.ErrBlobNotFound
