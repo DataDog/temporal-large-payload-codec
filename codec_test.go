@@ -83,9 +83,7 @@ func TestV2Codec(t *testing.T) {
 	for _, scenario := range testCase {
 		t.Run(scenario.name, func(t *testing.T) {
 			actualEncodedPayload, err := c.Encode([]*common.Payload{&scenario.payload})
-			if err != nil {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 
 			if updateEncodedPayload {
 				toFile(t, actualEncodedPayload[0].Data)
@@ -97,12 +95,44 @@ func TestV2Codec(t *testing.T) {
 			require.Equal(t, &scenario.encodedPayload, actualEncodedPayload[0])
 
 			actualPayload, err := c.Decode([]*common.Payload{&scenario.encodedPayload})
-			if err != nil {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
+
 			require.Equal(t, &scenario.payload, actualPayload[0])
 		})
 	}
+}
+
+func Test_setting_withDecodeOnly_disables_encoding(t *testing.T) {
+	d := &memory.Driver{}
+	srv := httptest.NewServer(server.NewHttpHandler(d))
+	defer srv.Close()
+	decodeOnlyCodec := setUpWithServer(t, "v2", srv, true)
+
+	defaultCodec := setUpWithServer(t, "v2", srv, false)
+
+	payload := common.Payload{
+		Metadata: map[string][]byte{
+			"foo":                     []byte("bar"),
+			"baz":                     []byte("qux"),
+			"remote-codec/key-prefix": []byte("1234"),
+		},
+		Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+	}
+
+	resp1, err := decodeOnlyCodec.Encode([]*common.Payload{&payload})
+	require.NoError(t, err)
+
+	require.Equal(t, &payload, resp1[0])
+
+	resp2, err := defaultCodec.Encode([]*common.Payload{&payload})
+	require.NoError(t, err)
+	require.NotEqual(t, &resp1[0], resp2[0])
+	require.NotEqual(t, &payload, resp2[0])
+
+	decodedResp2, err := decodeOnlyCodec.Decode(resp2)
+	require.NoError(t, err)
+
+	require.Equal(t, &payload, decodedResp2[0])
 }
 
 func Test_the_same_payload_can_be_encoded_multiple_times(t *testing.T) {
@@ -200,6 +230,17 @@ func TestNewCodec(t *testing.T) {
 		WithVersion("v3"),
 	)
 	require.Error(t, err)
+
+	// without URL health check during init.
+	client, err = New(
+		WithURL("INVALID URL"),
+		WithHTTPClient(s.Client()),
+		WithNamespace("test"),
+		WithVersion("v2"),
+		WithoutUrlHealthCheck(),
+	)
+
+	require.NoError(t, err)
 }
 
 func setUp(t *testing.T, version string) (*httptest.Server, *Codec, storage.Driver) {
@@ -208,25 +249,38 @@ func setUp(t *testing.T, version string) (*httptest.Server, *Codec, storage.Driv
 	s := httptest.NewServer(server.NewHttpHandler(d))
 
 	// Create test codec (to be used from Go SDK)
-	c, err := New(
-		WithURL(s.URL),
-		WithHTTPClient(s.Client()),
+	c := setUpWithServer(t, version, s, false)
+
+	return s, c, d
+}
+
+func setUpWithServer(t *testing.T, version string, server *httptest.Server, withDecodeOnly bool) *Codec {
+	// Create test remote codec service
+	opts := []Option{
+		WithURL(server.URL),
+		WithHTTPClient(server.Client()),
 		WithNamespace("test"),
 		WithMinBytes(32),
+	}
+	if withDecodeOnly {
+		opts = append(opts, WithDecodeOnly())
+	}
+	// Create test codec (to be used from Go SDK)
+	c, err := New(
+		opts...,
 	)
 	require.NoError(t, err)
 
 	c.version = version
 
-	return s, c, d
+	return c
 }
 
 func fromFile(t *testing.T) []byte {
 	path := filepath.Join("testdata", t.Name())
 	source, err := os.ReadFile(path)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
+
 	return source
 }
 

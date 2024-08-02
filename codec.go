@@ -38,6 +38,10 @@ type Codec struct {
 	minBytes int
 	// namespace is the Temporal namespace the client using this codec is connected to.
 	namespace string
+	// skipUrlHealthCheck when set to true will skip url health check during initialisation.
+	skipUrlHealthCheck bool
+	// disableEncoding when set to true encoding will be disabled.
+	disableEncoding bool
 }
 
 type keyResponse struct {
@@ -137,6 +141,22 @@ func WithVersion(version string) Option {
 	})
 }
 
+// WithoutUrlHealthCheck when set will skip the Url health check during initialisation.
+func WithoutUrlHealthCheck() Option {
+	return applier(func(c *Codec) error {
+		c.skipUrlHealthCheck = true
+		return nil
+	})
+}
+
+// WithDecodeOnly set whether to skip the Url health check during initialisation.
+func WithDecodeOnly() Option {
+	return applier(func(c *Codec) error {
+		c.disableEncoding = true
+		return nil
+	})
+}
+
 // WithHTTPRoundTripper sets custom Transport on the http.Client.
 //
 // This may be used to implement use cases including authentication or tracing.
@@ -189,20 +209,25 @@ func New(opts ...Option) (*Codec, error) {
 		return nil, fmt.Errorf("invalid codec version: %s", c.version)
 	}
 
-	// Check connectivity
-	headURL := c.url.JoinPath(c.version, "health", "head")
-	resp, err := c.client.Head(headURL.String())
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("got status code %d from storage service at %s", resp.StatusCode, headURL)
+	if !c.skipUrlHealthCheck {
+		// Check connectivity
+		headURL := c.url.JoinPath(c.version, "health", "head")
+		resp, err := c.client.Head(headURL.String())
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("got status code %d from storage service at %s", resp.StatusCode, headURL)
+		}
 	}
 
 	return &c, nil
 }
 
 func (c *Codec) Encode(payloads []*common.Payload) ([]*common.Payload, error) {
+	if c.disableEncoding {
+		return payloads, nil
+	}
 	var (
 		ctx    = context.Background()
 		result = make([]*common.Payload, len(payloads))
