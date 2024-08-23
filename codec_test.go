@@ -5,6 +5,7 @@
 package codec
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -161,6 +162,51 @@ func Test_the_same_payload_can_be_encoded_multiple_times(t *testing.T) {
 	require.Equal(t, resp1, resp2)
 }
 
+func Test_codec_sets_custom_headers_when_sending_request_to_lps(t *testing.T) {
+	expectedSingleHeaderKey := "SINGLE_HEADER"
+	expectedMultiHeaderKey := "MULTI_HEADER"
+	expectedHeaders := map[string][]string{
+		expectedSingleHeaderKey: {"VALUE"},
+		expectedMultiHeaderKey:  {"VALUE1", "VALUE2"},
+	}
+
+	testSrv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for header, values := range expectedHeaders {
+			gotValues := r.Header.Values(header)
+			require.Equal(t, values, gotValues)
+		}
+
+		w.WriteHeader(200)
+	}))
+
+	testSrv.Start()
+	defer testSrv.Close()
+	client, err := New(
+		WithURL(testSrv.URL),
+		WithoutUrlHealthCheck(),
+		WithHTTPClient(testSrv.Client()),
+		WithNamespace("test"),
+		WithMinBytes(32),
+		WithCustomHeader(expectedSingleHeaderKey, expectedHeaders[expectedSingleHeaderKey][0]),
+		WithCustomHeader(expectedMultiHeaderKey, expectedHeaders[expectedMultiHeaderKey][0]),
+		WithCustomHeader(expectedMultiHeaderKey, expectedHeaders[expectedMultiHeaderKey][1]),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	payload := common.Payload{
+		Metadata: map[string][]byte{
+			"foo":                     []byte("bar"),
+			"baz":                     []byte("qux"),
+			"remote-codec/key-prefix": []byte("1234"),
+		},
+		Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+	}
+
+	_, _ = client.Encode([]*common.Payload{&payload})
+}
+
 func TestNewCodec(t *testing.T) {
 	d := &memory.Driver{}
 	s := httptest.NewServer(server.NewHttpHandler(d))
@@ -239,8 +285,32 @@ func TestNewCodec(t *testing.T) {
 		WithVersion("v2"),
 		WithoutUrlHealthCheck(),
 	)
-
 	require.NoError(t, err)
+
+	// with invalid header key
+	client, err = New(
+		WithURL(s.URL),
+		WithHTTPClient(s.Client()),
+		WithNamespace("test"),
+		WithVersion("v2"),
+		WithoutUrlHealthCheck(),
+		WithCustomHeader("", "VALID_VALUE"),
+	)
+	require.Error(t, err)
+
+	// with valid customHeader
+	client, err = New(
+		WithURL(s.URL),
+		WithHTTPClient(s.Client()),
+		WithNamespace("test"),
+		WithVersion("v2"),
+		WithoutUrlHealthCheck(),
+		WithCustomHeader("VALID_SINGLE", "VALID_VALUE"),
+		WithCustomHeader("VALID_MULTI", "VALUE_1"),
+		WithCustomHeader("VALID_MULTI", "VALUE_2"),
+	)
+	require.NoError(t, err)
+
 }
 
 func setUp(t *testing.T, version string) (*httptest.Server, *Codec, storage.Driver) {
