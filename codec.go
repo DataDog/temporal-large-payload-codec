@@ -13,14 +13,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.temporal.io/api/common/v1"
+	"go.temporal.io/sdk/converter"
 	"io"
 	"net/http"
 	"net/url"
 	"path"
+	"regexp"
 	"strconv"
-
-	"go.temporal.io/api/common/v1"
-	"go.temporal.io/sdk/converter"
 )
 
 const (
@@ -42,6 +42,8 @@ type Codec struct {
 	skipUrlHealthCheck bool
 	// disableEncoding when set to true encoding will be disabled.
 	disableEncoding bool
+	// customHeaders http headers to add the request sent to LargePayloadService
+	customHeaders map[string][]string
 }
 
 type keyResponse struct {
@@ -153,6 +155,33 @@ func WithoutUrlHealthCheck() Option {
 func WithDecodeOnly() Option {
 	return applier(func(c *Codec) error {
 		c.disableEncoding = true
+		return nil
+	})
+}
+
+// WithCustomHeader adds a custom header to append to the http headers of the request sent to LargePayloadService
+// when called with the same header it will not override the header but instead will append to its value.
+// fails when passed an empty header.
+func WithCustomHeader(header string, value string) Option {
+	return applier(func(c *Codec) error {
+		if len(header) == 0 {
+			return errors.New("header cannot be empty")
+		}
+		matchesRegex, err := regexp.MatchString("^\\w+(-\\w+)*$", header)
+		if err != nil {
+			return errors.New("unable to validate header")
+		}
+		if !matchesRegex {
+			return errors.New("header has invalid characters")
+		}
+		if c.customHeaders == nil {
+			c.customHeaders = make(map[string][]string)
+		}
+		if _, exists := c.customHeaders[header]; !exists {
+			c.customHeaders[header] = make([]string, 0, 1)
+		}
+
+		c.customHeaders[header] = append(c.customHeaders[header], value)
 		return nil
 	})
 }
@@ -278,6 +307,12 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	}
 	req.Header.Set("X-Temporal-Metadata", base64.StdEncoding.EncodeToString(md))
 
+	for header, values := range c.customHeaders {
+		for _, value := range values {
+			req.Header.Add(header, url.QueryEscape(value))
+		}
+	}
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -359,6 +394,11 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/octet-stream")
+	for header, values := range c.customHeaders {
+		for _, value := range values {
+			req.Header.Add(header, url.QueryEscape(value))
+		}
+	}
 	// TODO: we temporarily need this because we aren't checking object metadata on the server
 	req.Header.Set("X-Payload-Expected-Content-Length", strconv.FormatUint(uint64(remoteP.Size), 10))
 
