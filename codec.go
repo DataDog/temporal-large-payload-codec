@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"regexp"
 	"strconv"
 )
 
@@ -165,6 +166,13 @@ func WithCustomHeader(header string, value string) Option {
 	return applier(func(c *Codec) error {
 		if len(header) == 0 {
 			return errors.New("header cannot be empty")
+		}
+		matchesRegex, err := regexp.MatchString("^\\w+(-\\w+)*$", header)
+		if err != nil {
+			return errors.New("unable to validate header")
+		}
+		if !matchesRegex {
+			return errors.New("header has invalid characters")
 		}
 		if c.customHeaders == nil {
 			c.customHeaders = make(map[string][]string)

@@ -170,7 +170,7 @@ func Test_codec_sets_custom_headers_when_sending_request_to_lps(t *testing.T) {
 		expectedMultiHeaderKey:  {"VALUE1", "VALUE2"},
 	}
 
-	testSrv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	testSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for header, values := range expectedHeaders {
 			gotValues := r.Header.Values(header)
 			require.Equal(t, values, gotValues)
@@ -178,9 +178,8 @@ func Test_codec_sets_custom_headers_when_sending_request_to_lps(t *testing.T) {
 
 		w.WriteHeader(200)
 	}))
-
-	testSrv.Start()
 	defer testSrv.Close()
+
 	client, err := New(
 		WithURL(testSrv.URL),
 		WithoutUrlHealthCheck(),
@@ -287,7 +286,7 @@ func TestNewCodec(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// with invalid header key
+	// with empty header key
 	client, err = New(
 		WithURL(s.URL),
 		WithHTTPClient(s.Client()),
@@ -298,6 +297,17 @@ func TestNewCodec(t *testing.T) {
 	)
 	require.Error(t, err)
 
+	// with invalid header key
+	client, err = New(
+		WithURL(s.URL),
+		WithHTTPClient(s.Client()),
+		WithNamespace("test"),
+		WithVersion("v2"),
+		WithoutUrlHealthCheck(),
+		WithCustomHeader("invalid header", "VALID_VALUE"),
+	)
+	require.Error(t, err)
+
 	// with valid customHeader
 	client, err = New(
 		WithURL(s.URL),
@@ -305,9 +315,9 @@ func TestNewCodec(t *testing.T) {
 		WithNamespace("test"),
 		WithVersion("v2"),
 		WithoutUrlHealthCheck(),
-		WithCustomHeader("VALID_SINGLE", "VALID_VALUE"),
-		WithCustomHeader("VALID_MULTI", "VALUE_1"),
-		WithCustomHeader("VALID_MULTI", "VALUE_2"),
+		WithCustomHeader("VALID0SINGLE", "VALID_VALUE"),
+		WithCustomHeader("VALID-MULTI", "VALUE_1"),
+		WithCustomHeader("VALID-MULTI", "VALUE_2"),
 	)
 	require.NoError(t, err)
 
