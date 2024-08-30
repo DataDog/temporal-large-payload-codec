@@ -182,7 +182,6 @@ func Test_codec_sets_custom_headers_when_sending_request_to_lps(t *testing.T) {
 
 	client, err := New(
 		WithURL(testSrv.URL),
-		WithoutUrlHealthCheck(),
 		WithHTTPClient(testSrv.Client()),
 		WithNamespace("test"),
 		WithMinBytes(32),

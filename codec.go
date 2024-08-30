@@ -71,6 +71,14 @@ func (a applier) apply(c *Codec) error {
 	return a(c)
 }
 
+func addCustomHeaders(req *http.Request, headers map[string][]string) {
+	for header, values := range headers {
+		for _, value := range values {
+			req.Header.Add(header, url.QueryEscape(value))
+		}
+	}
+}
+
 // WithURL sets the endpoint for the remote payload storage service.
 // This option is mandatory.
 func WithURL(u string) Option {
@@ -241,7 +249,10 @@ func New(opts ...Option) (*Codec, error) {
 	if !c.skipUrlHealthCheck {
 		// Check connectivity
 		headURL := c.url.JoinPath(c.version, "health", "head")
-		resp, err := c.client.Head(headURL.String())
+		req, err := http.NewRequest(http.MethodHead, headURL.String(), nil)
+		addCustomHeaders(req, c.customHeaders)
+		resp, err := c.client.Do(req)
+
 		if err != nil {
 			return nil, err
 		}
@@ -307,12 +318,7 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	}
 	req.Header.Set("X-Temporal-Metadata", base64.StdEncoding.EncodeToString(md))
 
-	for header, values := range c.customHeaders {
-		for _, value := range values {
-			req.Header.Add(header, url.QueryEscape(value))
-		}
-	}
-
+	addCustomHeaders(req, c.customHeaders)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -394,11 +400,8 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/octet-stream")
-	for header, values := range c.customHeaders {
-		for _, value := range values {
-			req.Header.Add(header, url.QueryEscape(value))
-		}
-	}
+
+	addCustomHeaders(req, c.customHeaders)
 	// TODO: we temporarily need this because we aren't checking object metadata on the server
 	req.Header.Set("X-Payload-Expected-Content-Length", strconv.FormatUint(uint64(remoteP.Size), 10))
 
