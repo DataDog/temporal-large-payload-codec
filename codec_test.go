@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/common/v1"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/DataDog/temporal-large-payload-codec/server"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
@@ -93,12 +94,12 @@ func TestV2Codec(t *testing.T) {
 			// load the encoded payload from file
 			scenario.encodedPayload.Data = fromFile(t)
 
-			require.Equal(t, &scenario.encodedPayload, actualEncodedPayload[0])
+			require.True(t, proto.Equal(&scenario.encodedPayload, actualEncodedPayload[0]))
 
 			actualPayload, err := c.Decode([]*common.Payload{&scenario.encodedPayload})
 			require.NoError(t, err)
 
-			require.Equal(t, &scenario.payload, actualPayload[0])
+			require.True(t, proto.Equal(&scenario.payload, actualPayload[0]))
 		})
 	}
 }
@@ -123,7 +124,7 @@ func Test_setting_withDecodeOnly_disables_encoding(t *testing.T) {
 	resp1, err := decodeOnlyCodec.Encode([]*common.Payload{&payload})
 	require.NoError(t, err)
 
-	require.Equal(t, &payload, resp1[0])
+	require.True(t, proto.Equal(&payload, resp1[0]))
 
 	resp2, err := defaultCodec.Encode([]*common.Payload{&payload})
 	require.NoError(t, err)
@@ -133,7 +134,7 @@ func Test_setting_withDecodeOnly_disables_encoding(t *testing.T) {
 	decodedResp2, err := decodeOnlyCodec.Decode(resp2)
 	require.NoError(t, err)
 
-	require.Equal(t, &payload, decodedResp2[0])
+	require.True(t, proto.Equal(&payload, decodedResp2[0]))
 }
 
 func Test_the_same_payload_can_be_encoded_multiple_times(t *testing.T) {

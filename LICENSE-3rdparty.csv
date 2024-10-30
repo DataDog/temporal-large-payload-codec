@@ -1,4 +1,6 @@
 Component,Origin,License,Copyright
+cloud.google.com/go/auth,https://github.com/googleapis/google-cloud-go,Apache-2.0,
+cloud.google.com/go/auth/oauth2adapt,https://github.com/googleapis/google-cloud-go,Apache-2.0,
 cloud.google.com/go/compute/metadata,https://github.com/googleapis/google-cloud-go,Apache-2.0,
 cloud.google.com/go/iam,https://github.com/googleapis/google-cloud-go,Apache-2.0,
 cloud.google.com/go/internal,https://github.com/googleapis/google-cloud-go,Apache-2.0,
@@ -30,21 +32,23 @@ github.com/aws/aws-sdk-go-v2/service/sts,https://github.com/aws/aws-sdk-go-v2,Ap
 github.com/aws/smithy-go,https://github.com/aws/smithy-go,Apache-2.0,
 github.com/aws/smithy-go/internal/sync/singleflight,https://github.com/aws/smithy-go,BSD-3-Clause,The Go Authors
 github.com/emirpasic/gods,https://github.com/emirpasic/gods,BSD-2-Clause,Emir Pasic
+github.com/felixge/httpsnoop,https://github.com/felixge/httpsnoop,MIT,Felix Geisendörfer (felix@debuggable.com)
 github.com/go-logr/logr,https://github.com/go-logr/logr,Apache-2.0,
+github.com/go-logr/stdr,https://github.com/go-logr/stdr,Apache-2.0,
 github.com/gogo/protobuf,https://github.com/gogo/protobuf,BSD-3-Clause,The GoGo Authors
 github.com/golang-jwt/jwt/v4,https://github.com/golang-jwt/jwt,MIT,Dave Grijalva
 github.com/golang/groupcache/lru,https://github.com/golang/groupcache,Apache-2.0,
-github.com/golang/protobuf,https://github.com/golang/protobuf,BSD-3-Clause,The Go Authors
-github.com/google/go-cmp/cmp,https://github.com/google/go-cmp,BSD-3-Clause,The Go Authors
+github.com/golang/protobuf/proto,https://github.com/golang/protobuf,BSD-3-Clause,The Go Authors
 github.com/google/go-licenses/internal/third_party/pkgsite,https://github.com/google/go-licenses,BSD-3-Clause,The Go Authors
 github.com/google/go-licenses/licenses,https://github.com/google/go-licenses,Apache-2.0,
 github.com/google/licenseclassifier,https://github.com/google/licenseclassifier,Apache-2.0,
 github.com/google/licenseclassifier/licenses,https://github.com/google/licenseclassifier,Unlicense,
 github.com/google/licenseclassifier/stringclassifier,https://github.com/google/licenseclassifier,Apache-2.0,
+github.com/google/s2a-go,https://github.com/google/s2a-go,Apache-2.0,
 github.com/google/uuid,https://github.com/google/uuid,BSD-3-Clause,Google Inc.
 github.com/googleapis/enterprise-certificate-proxy/client,https://github.com/googleapis/enterprise-certificate-proxy,Apache-2.0,
 github.com/googleapis/gax-go/v2,https://github.com/googleapis/gax-go,BSD-3-Clause,Google Inc.
-github.com/googleapis/go-type-adapters/adapters,https://github.com/googleapis/go-type-adapters,Apache-2.0,
+github.com/grpc-ecosystem/grpc-gateway/v2,https://github.com/grpc-ecosystem/grpc-gateway,BSD-3-Clause,"Gengo, Inc."
 github.com/jbenet/go-context/io,https://github.com/jbenet/go-context,MIT,Juan Batiz-Benet
 github.com/jmespath/go-jmespath,https://github.com/jmespath/go-jmespath,Apache-2.0,James Saryerwinnie
 github.com/kevinburke/ssh_config,https://github.com/kevinburke/ssh_config,MIT,Kevin Burke
@@ -56,19 +60,28 @@ github.com/sergi/go-diff/diffmatchpatch,https://github.com/sergi/go-diff,MIT,The
 github.com/src-d/gcfg,https://github.com/src-d/gcfg,BSD-3-Clause,Péter Surányi. Portions Copyright (c) 2009 The Go
 github.com/xanzy/ssh-agent,https://github.com/xanzy/ssh-agent,Apache-2.0,
 go.opencensus.io,https://github.com/census-instrumentation/opencensus-go,Apache-2.0,
+go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc,https://github.com/open-telemetry/opentelemetry-go-contrib,Apache-2.0,
+go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp,https://github.com/open-telemetry/opentelemetry-go-contrib,Apache-2.0,
+go.opentelemetry.io/otel,https://github.com/open-telemetry/opentelemetry-go,Apache-2.0,
+go.opentelemetry.io/otel/metric,https://github.com/open-telemetry/opentelemetry-go,Apache-2.0,
+go.opentelemetry.io/otel/trace,https://github.com/open-telemetry/opentelemetry-go,Apache-2.0,
 go.temporal.io/api,https://github.com/temporalio/api-go,MIT,Temporal Technologies Inc.
+go.temporal.io/api/internal/protojson,https://github.com/temporalio/api-go,BSD-3-Clause,The Go Authors
 go.temporal.io/sdk/converter,https://github.com/temporalio/sdk-go,MIT,Temporal Technologies Inc.
-golang.org/x/crypto,https://cs.opensource.google/go/x/crypto/+/v0.9.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/mod/semver,https://cs.opensource.google/go/x/mod/+/v0.8.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/net,https://cs.opensource.google/go/x/net/+/v0.10.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/oauth2,https://cs.opensource.google/go/x/oauth2/+/fd043fe5:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/sys,https://cs.opensource.google/go/x/sys/+/v0.8.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/text,https://cs.opensource.google/go/x/text/+/v0.9.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/tools,https://cs.opensource.google/go/x/tools/+/v0.6.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/xerrors,https://cs.opensource.google/go/x/xerrors/+/65e65417:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/crypto,https://cs.opensource.google/go/x/crypto/+/v0.26.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/mod/semver,https://cs.opensource.google/go/x/mod/+/v0.17.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/net,https://cs.opensource.google/go/x/net/+/v0.28.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/oauth2,https://cs.opensource.google/go/x/oauth2/+/v0.22.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/sync,https://cs.opensource.google/go/x/sync/+/v0.8.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/sys/unix,https://cs.opensource.google/go/x/sys/+/v0.24.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/text,https://cs.opensource.google/go/x/text/+/v0.17.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/time/rate,https://cs.opensource.google/go/x/time/+/v0.5.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/tools,https://cs.opensource.google/go/x/tools/+/e35e4ccd:LICENSE,BSD-3-Clause,The Go Authors
 google.golang.org/api,https://github.com/googleapis/google-api-go-client,BSD-3-Clause,Google Inc.
 google.golang.org/api/internal/third_party/uritemplates,https://github.com/googleapis/google-api-go-client,BSD-3-Clause,Joshua Tacoma
-google.golang.org/genproto/googleapis,https://github.com/googleapis/go-genproto,Apache-2.0,
+google.golang.org/genproto/googleapis/api,https://github.com/googleapis/go-genproto,Apache-2.0,
+google.golang.org/genproto/googleapis/rpc,https://github.com/googleapis/go-genproto,Apache-2.0,
+google.golang.org/genproto/googleapis/type,https://github.com/googleapis/go-genproto,Apache-2.0,
 google.golang.org/grpc,https://github.com/grpc/grpc-go,Apache-2.0,
 google.golang.org/protobuf,https://github.com/protocolbuffers/protobuf-go,BSD-3-Clause,The Go Authors
 gopkg.in/src-d/go-billy.v4,https://github.com/src-d/go-billy,Apache-2.0,Sourced Technologies S.L
