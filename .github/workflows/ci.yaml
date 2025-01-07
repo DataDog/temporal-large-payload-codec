@@ -13,22 +13,22 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version-file: 'go.mod'
+          go-version-file: 'go.work'
           check-latest: true
 
       - name: Print Go version
         run: go version
 
       - name: Build binary
-        run: go build -o lps cmd/server/main.go
+        run: make build
 
       - name: Run tests
-        run: go test ./...
+        run: make test
 
       - name: Lint code
         run: |
-          gofmt -l .
-          test -z $(gofmt -l .)
+          gofmt -l $(ls -d */ | grep -v vendor)
+          test -z $(gofmt -l $(ls -d */ | grep -v vendor))
 
       - name: Validate 3rd party dependencies
         run: |

@@ -24,7 +24,7 @@ This doc is for contributors to Large Payload Service (hopefully that's you!).
 
 ### Build prerequisites
 
-* [Go Lang](https://golang.org/) (minimum version required is 1.19):
+* [Go Lang](https://golang.org/) (minimum version required is 1.23):
     - Install on macOS with `brew install go`.
     - Install on Ubuntu with `sudo apt install golang`.
 

@@ -24,7 +24,8 @@ const (
 )
 
 var (
-	ignoredPath = []string{"github.com/DataDog/temporal-large-payload-codec"}
+	importPaths = []string{"./internal/...", "./server/...", "./codec/..."}
+	ignoredPath = []string{"github.com/DataDog/temporal-large-payload-codec", "github.com/DataDog/temporal-large-payload-codec/codec", "github.com/DataDog/temporal-large-payload-codec/server"}
 )
 
 func main() {
@@ -56,7 +57,7 @@ func execute() error {
 
 	ctx := context.Background()
 
-	libs, err := licenses.Libraries(ctx, classifier, false, ignoredPath, "./...")
+	libs, err := licenses.Libraries(ctx, classifier, false, ignoredPath, importPaths...)
 	if err != nil {
 		return err
 	}

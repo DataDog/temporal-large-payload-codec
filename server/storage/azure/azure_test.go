@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"io"
 	"os"
 	"testing"
@@ -17,8 +18,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/orlangure/gnomock"
 	"github.com/stretchr/testify/require"
-
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
 const (

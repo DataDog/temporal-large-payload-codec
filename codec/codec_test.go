@@ -5,6 +5,10 @@
 package codec
 
 import (
+	"github.com/DataDog/temporal-large-payload-codec/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
+	"go.temporal.io/api/common/v1"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,11 +16,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.temporal.io/api/common/v1"
-
-	"github.com/DataDog/temporal-large-payload-codec/server"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 )
 
 const (
@@ -356,7 +355,9 @@ func setUpWithServer(t *testing.T, version string, server *httptest.Server, with
 }
 
 func fromFile(t *testing.T) []byte {
-	path := filepath.Join("testdata", t.Name())
+	currentPath, err := os.Getwd()
+	require.NoError(t, err)
+	path := filepath.Join(currentPath+"/testdata", t.Name())
 	source, err := os.ReadFile(path)
 	require.NoError(t, err)
 

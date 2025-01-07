@@ -8,6 +8,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/DataDog/temporal-large-payload-codec/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/logging"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/azure"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/s3"
 	"log"
 	"net/http"
 	"os"
@@ -15,14 +22,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/pkg/errors"
-
-	"github.com/DataDog/temporal-large-payload-codec/logging"
-	"github.com/DataDog/temporal-large-payload-codec/server"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/azure"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/s3"
 )
 
 var (

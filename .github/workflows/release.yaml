@@ -1,30 +1,19 @@
-name: LPS Release
+name: LPS Releases
 
 on:
   push:
     tags:
       - '*'
 
-permissions:
-  contents: write
-
 jobs:
-  goreleaser:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: googleapis/release-please-action@v4
         with:
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v3
-        with:
-          go-version-file: 'go.mod'
-          check-latest: true
-
-      - uses: goreleaser/goreleaser-action@v4
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN || github.token }}
+          path: 'codec'
+          release-type: go
+          target-branch: mortadha.teffaha/split_server_and_codec_dependencies
+          config-file: '.github/workflows/release-please-config.json'
+          include-component-in-tag: 'true'
