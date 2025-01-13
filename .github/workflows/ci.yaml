@@ -13,34 +13,34 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version-file: 'go.mod'
+          go-version-file: 'go.work'
           check-latest: true
 
       - name: Print Go version
         run: go version
 
       - name: Build binary
-        run: go build -o lps cmd/server/main.go
+        run: make build
 
       - name: Run tests
-        run: go test ./...
+        run: make test
 
       - name: Lint code
         run: |
-          gofmt -l .
-          test -z $(gofmt -l .)
+          gofmt -l $(ls -d */ | grep -v vendor)
+          test -z $(gofmt -l $(ls -d */ | grep -v vendor))
 
       - name: Validate 3rd party dependencies
         run: |
           go run internal/tools/licensecheck/main.go
           if ! git diff --quiet LICENSE-3rdparty.csv; then
-            echo "LICENSE-3rdparty.csv is out of date. Please run 'go run ./internal/tools/licensecheck' and commit the changes."
+            echo "LICENSE-3rdparty.csv is out of date. Please run 'make update_license_file' and commit the changes."
             exit 1
           fi
 
       - name: Validate Go header files
         run: |
           if ! go run ./internal/tools/copyright -verifyOnly; then
-            echo "Required Go header(s) Missing. Please run 'go run ./internal/tools/copyright' and commit the changes."
+            echo "Required Go header(s) Missing. Please run 'make update_copyright_headers' and commit the changes."
             exit 1
           fi          
