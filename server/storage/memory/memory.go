@@ -7,10 +7,9 @@ package memory
 import (
 	"bytes"
 	"context"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"io"
 	"sync"
-
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
 var _ storage.Driver = &Driver{}

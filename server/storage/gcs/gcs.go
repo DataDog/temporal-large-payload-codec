@@ -8,11 +8,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"io"
 	"log"
 
 	gcs "cloud.google.com/go/storage"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
 type Driver struct {

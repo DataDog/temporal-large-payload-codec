@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/DataDog/temporal-large-payload-codec/server/logging"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"hash"
 	"io"
 	"net/http"
@@ -19,9 +21,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/DataDog/temporal-large-payload-codec/logging"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
 const (
