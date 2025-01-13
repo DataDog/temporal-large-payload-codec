@@ -4,16 +4,14 @@ on:
   push:
     tags:
       - '*'
-
+permissions:
+  contents: write
+  pull-requests: write
 jobs:
-  release:
+  release-please:
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN || github.token }}
-          path: 'codec'
-          release-type: go
-          target-branch: mortadha.teffaha/split_server_and_codec_dependencies
-          config-file: '.github/workflows/release-please-config.json'
-          include-component-in-tag: 'true'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: simple
