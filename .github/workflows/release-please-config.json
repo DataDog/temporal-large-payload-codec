@@ -1,0 +1,10 @@
+{
+  "packages": {
+    "./codec": {
+      "release-type": "go"
+    },
+    "./server": {
+      "release-type": "go"
+    }
+  }
+}
