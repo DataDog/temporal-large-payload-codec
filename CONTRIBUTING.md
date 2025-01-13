@@ -24,9 +24,12 @@ This doc is for contributors to Large Payload Service (hopefully that's you!).
 
 ### Build prerequisites
 
-* [Go Lang](https://golang.org/) (minimum version required is 1.19):
+* [Go Lang](https://golang.org/) (minimum version required is 1.23):
     - Install on macOS with `brew install go`.
     - Install on Ubuntu with `sudo apt install golang`.
+*[Make command](https://www.gnu.org/software/make/)
+    - install on MacOS with `xcode-select --install`
+    - install on Ubuntu with `sudo apt install make`
 
 ## Development
 
@@ -42,7 +45,7 @@ git clone https://github.com/DataDog/temporal-large-payload-codec.git
 ### Build the Source
 
 ```sh
-go build -o lps cmd/server/main.go
+make build
 ```
 
 ### Run the Tests
@@ -50,7 +53,7 @@ go build -o lps cmd/server/main.go
 To run the unit tests:
 
 ```sh
-go test ./...
+make test
 ```
 
 ### Format the Code
@@ -65,7 +68,7 @@ The license, origin, and copyright of all third party code is tracked in `LICENS
 To verify that this file is up-to-date execute:
 
 ```sh
-go run ./internal/tools/licensecheck
+make update_license_file
 ```
 
 ### Go file headers
@@ -73,7 +76,7 @@ go run ./internal/tools/licensecheck
 To ensure all Go files contain the correct license header, execute:
 
 ```sh
-go run ./internal/tools/copyright
+make update_copyright_headers
 ```
 
 ## CI
