@@ -13,14 +13,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.temporal.io/api/common/v1"
-	"go.temporal.io/sdk/converter"
 	"io"
 	"net/http"
 	"net/url"
 	"path"
 	"regexp"
 	"strconv"
+
+	"go.temporal.io/api/common/v1"
+	"go.temporal.io/sdk/converter"
 )
 
 const (

@@ -8,10 +8,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/DataDog/temporal-large-payload-codec/server/logging"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"net/http"
 	"strconv"
+
+	"github.com/DataDog/temporal-large-payload-codec/server/logging"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
 // NewHandler creates a v1 HTTP handler for the Large Payload Service.

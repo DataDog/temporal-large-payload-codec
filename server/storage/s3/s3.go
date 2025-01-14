@@ -8,9 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"github.com/aws/smithy-go"
-	"io"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"

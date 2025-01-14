@@ -7,14 +7,15 @@ package server_test
 import (
 	"context"
 	"fmt"
-	"github.com/DataDog/temporal-large-payload-codec/codec"
-	"github.com/DataDog/temporal-large-payload-codec/server"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
-	"go.temporal.io/api/enums/v1"
 	"math/rand"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/DataDog/temporal-large-payload-codec/codec"
+	"github.com/DataDog/temporal-large-payload-codec/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
+	"go.temporal.io/api/enums/v1"
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/temporalite/temporaltest"

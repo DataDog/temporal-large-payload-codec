@@ -8,6 +8,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/DataDog/temporal-large-payload-codec/server"
 	"github.com/DataDog/temporal-large-payload-codec/server/logging"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
@@ -15,10 +20,6 @@ import (
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/s3"
-	"log"
-	"net/http"
-	"os"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/pkg/errors"

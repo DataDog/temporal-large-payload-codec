@@ -5,15 +5,16 @@
 package codec
 
 import (
-	"github.com/DataDog/temporal-large-payload-codec/server"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
-	"go.temporal.io/api/common/v1"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/DataDog/temporal-large-payload-codec/server"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
+	"go.temporal.io/api/common/v1"
 
 	"github.com/stretchr/testify/require"
 )

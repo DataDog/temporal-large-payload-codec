@@ -7,8 +7,9 @@ package azure
 import (
 	"context"
 	"fmt"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"io"
+
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"

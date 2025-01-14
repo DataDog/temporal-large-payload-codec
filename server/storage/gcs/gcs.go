@@ -8,9 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"io"
 	"log"
+
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 
 	gcs "cloud.google.com/go/storage"
 )
