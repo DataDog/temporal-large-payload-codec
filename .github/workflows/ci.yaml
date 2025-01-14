@@ -27,8 +27,8 @@ jobs:
 
       - name: Lint code
         run: |
-          gofmt -l $(ls -d */ | grep -v vendor)
-          test -z $(gofmt -l $(ls -d */ | grep -v vendor))
+          gofmt -l .
+          test -z $(gofmt -l .)
 
       - name: Validate 3rd party dependencies
         run: |
