@@ -356,9 +356,7 @@ func setUpWithServer(t *testing.T, version string, server *httptest.Server, with
 }
 
 func fromFile(t *testing.T) []byte {
-	currentPath, err := os.Getwd()
-	require.NoError(t, err)
-	path := filepath.Join(currentPath+"/testdata", t.Name())
+	path := filepath.Join("testdata", t.Name())
 	source, err := os.ReadFile(path)
 	require.NoError(t, err)
 
