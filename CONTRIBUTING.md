@@ -90,9 +90,9 @@ act pull_request
 
 ## Releasing
 
-The release process is automated via [goreleaser](https://goreleaser.com/) and executed via the GitHub Workflow in [.github/workflows/release.yaml](.github/workflows/release.yaml).
-To cut a release create a tag locally and push it to GitHub.
-The tag should be a valid [semantic version](https://semver.org/), prefixed with 'v', eg _v1.0.0_.
+The release process is automated via [ncipollo/release-action@v1.14.0](https://github.com/ncipollo/release-action) and executed via the GitHub Workflow in [.github/workflows/release.yaml](.github/workflows/release.yaml).
+To cut a release create a tag locally and push it to GitHub. the tag has the following format : `<MODULE>/<VERSION>` whith module being either `server` or `codec` depending on what you want to
+release and version being a valid [semantic version](https://semver.org/), prefixed with 'v', eg _codec/v1.0.0_.
 
 To release v1.0.0 you would run:
 
