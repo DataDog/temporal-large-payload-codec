@@ -5,7 +5,7 @@ go 1.19
 replace github.com/DataDog/temporal-large-payload-codec/server => ../server
 
 require (
-	github.com/DataDog/temporal-large-payload-codec/server v1.3.9
+	github.com/DataDog/temporal-large-payload-codec/server v1.3.0
 	github.com/stretchr/testify v1.8.0
 	go.temporal.io/api v1.8.1-0.20220603192404-e65836719706
 	go.temporal.io/sdk v1.15.0
