@@ -11,8 +11,9 @@ import (
 	"io"
 	"log"
 
-	gcs "cloud.google.com/go/storage"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+
+	gcs "cloud.google.com/go/storage"
 )
 
 type Driver struct {

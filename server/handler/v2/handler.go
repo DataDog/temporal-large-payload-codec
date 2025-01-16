@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/DataDog/temporal-large-payload-codec/logging"
+	"github.com/DataDog/temporal-large-payload-codec/server/logging"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 

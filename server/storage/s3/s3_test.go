@@ -9,16 +9,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/orlangure/gnomock"
 	"github.com/orlangure/gnomock/preset/localstack"
 	"github.com/stretchr/testify/require"
-	"io"
-	"os"
-	"testing"
-	"time"
 )
 
 func TestS3Driver(t *testing.T) {

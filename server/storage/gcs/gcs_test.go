@@ -8,12 +8,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
-	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
 
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/gcs"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDriver(t *testing.T) {

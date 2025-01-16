@@ -5,12 +5,11 @@
 package server
 
 import (
-	"net/http"
-
-	"github.com/DataDog/temporal-large-payload-codec/logging"
 	v2 "github.com/DataDog/temporal-large-payload-codec/server/handler/v2"
-
+	"github.com/DataDog/temporal-large-payload-codec/server/logging"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+
+	"net/http"
 )
 
 // NewHttpHandler creates the default HTTP handler for the Large Payload Service using a

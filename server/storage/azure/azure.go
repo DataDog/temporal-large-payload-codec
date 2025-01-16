@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
-
-	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 )
 
 // Config provides all configuration to create the Azure based driver for LPS.
