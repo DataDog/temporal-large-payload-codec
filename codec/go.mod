@@ -1,6 +1,6 @@
 module github.com/DataDog/temporal-large-payload-codec/codec
 
-go 1.19
+go 1.25.7
 
 replace github.com/DataDog/temporal-large-payload-codec/server => ../server
 
