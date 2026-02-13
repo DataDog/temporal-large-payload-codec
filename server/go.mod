@@ -1,6 +1,6 @@
 module github.com/DataDog/temporal-large-payload-codec/server
 
-go 1.19
+go 1.25.7
 
 replace github.com/cactus/go-statsd-client => github.com/cactus/go-statsd-client v0.0.0-20200423205355-cb0885a1018c
 
