@@ -1,6 +1,6 @@
 module github.com/DataDog/temporal-large-payload-codec/internal
 
-go 1.23.1
+go 1.25.7
 
 require (
 	github.com/google/go-licenses v1.6.0
