@@ -42,10 +42,10 @@ func New(config *Config) *Driver {
 	})
 	return &Driver{
 		client: cli,
-		uploader: manager.NewUploader(cli, func(u *manager.Uploader) {
+		uploader: manager.NewUploader(cli, func(u *manager.Uploader) { //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
 			u.Concurrency = 1 // disable concurrent uploads so we can read directly from the http request body
 		}),
-		downloader: manager.NewDownloader(cli, func(d *manager.Downloader) {
+		downloader: manager.NewDownloader(cli, func(d *manager.Downloader) { //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
 			d.Concurrency = 1 // disable concurrent downloads so that we can write directly to the http response stream
 		}),
 		bucket:       config.Bucket,
@@ -55,15 +55,15 @@ func New(config *Config) *Driver {
 
 type Driver struct {
 	client       *s3.Client
-	uploader     *manager.Uploader
-	downloader   *manager.Downloader
+	uploader     *manager.Uploader   //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
+	downloader   *manager.Downloader //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
 	bucket       string
 	storageClass s3types.StorageClass
 }
 
 func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storage.GetResponse, error) {
 	w := sequentialWriterAt{w: r.Writer}
-	numBytes, err := d.downloader.Download(ctx, &w, &s3.GetObjectInput{
+	numBytes, err := d.downloader.Download(ctx, &w, &s3.GetObjectInput{ //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
 		Bucket: &d.bucket,
 		Key:    aws.String(r.Key),
 	})
@@ -83,7 +83,7 @@ func (d *Driver) GetPayload(ctx context.Context, r *storage.GetRequest) (*storag
 }
 
 func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storage.PutResponse, error) {
-	_, err := d.uploader.Upload(ctx, &s3.PutObjectInput{
+	_, err := d.uploader.Upload(ctx, &s3.PutObjectInput{ //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
 		Bucket:        &d.bucket,
 		Key:           aws.String(r.Key),
 		Body:          r.Data,

@@ -21,17 +21,17 @@ func NewBuiltinLogger() *BuiltinLogger {
 
 func (l *BuiltinLogger) Debug(msg string, keyvals ...interface{}) {
 	logLine := append([]interface{}{"debug:", msg}, keyvals...)
-	l.log(append(logLine))
+	l.log(logLine)
 }
 
 func (l *BuiltinLogger) Info(msg string, keyvals ...interface{}) {
 	logLine := append([]interface{}{"info:", msg}, keyvals...)
-	l.log(append(logLine))
+	l.log(logLine)
 }
 
 func (l *BuiltinLogger) Error(msg string, keyvals ...interface{}) {
 	logLine := append([]interface{}{"error:", msg}, keyvals...)
-	l.log(append(logLine))
+	l.log(logLine)
 }
 
 func (l *BuiltinLogger) log(logLine []interface{}) {
