@@ -251,9 +251,11 @@ func New(opts ...Option) (*Codec, error) {
 		// Check connectivity
 		headURL := c.url.JoinPath(c.version, "health", "head")
 		req, err := http.NewRequest(http.MethodHead, headURL.String(), nil)
+		if err != nil {
+			return nil, err
+		}
 		addCustomHeaders(req, c.customHeaders)
 		resp, err := c.client.Do(req)
-
 		if err != nil {
 			return nil, err
 		}
@@ -322,7 +324,7 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	addCustomHeaders(req, c.customHeaders)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		panicOnIOError(err) //nolint: resp is nil when Do fails; panicOnIOError panics before resp.Body is accessed below
+		panicOnIOError(err) // resp is nil when Do fails; panicOnIOError panics before resp.Body is accessed below
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
@@ -336,7 +338,7 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 
 	var key keyResponse
 	if err := json.Unmarshal(respBody, &key); err != nil {
-		panicOnIOError(fmt.Errorf("unable to unmarshal put response: %w", err)) //nolint: key is zero-valued when unmarshal fails; panicOnIOError panics before key.Key is used below
+		panicOnIOError(fmt.Errorf("unable to unmarshal put response: %w", err)) // key is zero-valued when unmarshal fails; panicOnIOError panics before key.Key is used below
 	}
 
 	result, err := converter.GetDefaultDataConverter().ToPayload(remotePayload{
@@ -408,7 +410,7 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		panicOnIOError(err) //nolint: resp is nil when Do fails; panicOnIOError panics before resp.StatusCode is accessed below
+		panicOnIOError(err) // resp is nil when Do fails; panicOnIOError panics before resp.StatusCode is accessed below
 	}
 
 	if resp.StatusCode != http.StatusOK {
