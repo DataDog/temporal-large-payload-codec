@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	defaultAzuriteVersion  = "3.21.0"
+	defaultAzuriteVersion  = "3.35.0"
 	defaultAzuriteUsername = "devstoreaccount1"
 	defaultAzuritePassword = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
 	testBucketName         = "lps-test-bucket"
@@ -101,7 +101,7 @@ func TestAzureDriver(t *testing.T) {
 
 func setUp(t *testing.T) (Config, func()) {
 	p := AzuritePreset(
-		WithVersion("3.21.0"),
+		WithVersion("3.35.0"),
 		WithBuckets([]string{testBucketName}),
 	)
 	opts := []gnomock.Option{
