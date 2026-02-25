@@ -94,6 +94,7 @@ func TestAzureDriver(t *testing.T) {
 
 	// Ensure the payload was deleted
 	resp, err = driver.ExistPayload(ctx, &storage.ExistRequest{Key: putResponse.Key})
+	require.NoError(t, err)
 	require.False(t, resp.Exists)
 
 	time.Sleep(1 * time.Second)
