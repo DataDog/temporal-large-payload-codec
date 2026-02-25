@@ -8,10 +8,10 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version-file: 'go.work'
           check-latest: true
@@ -25,22 +25,20 @@ jobs:
       - name: Run tests
         run: make test
 
-      - name: Lint code
-        run: |
-          gofmt -l .
-          test -z $(gofmt -l .)
+      - name: Lint code (codec)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.10.1
+          working-directory: codec
+
+      - name: Lint code (server)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.10.1
+          working-directory: server
 
       - name: Validate 3rd party dependencies
-        run: |
-          go run internal/tools/licensecheck/main.go
-          if ! git diff --quiet LICENSE-3rdparty.csv; then
-            echo "LICENSE-3rdparty.csv is out of date. Please run 'make update_license_file' and commit the changes."
-            exit 1
-          fi
+        run: make check_license
 
       - name: Validate Go header files
-        run: |
-          if ! go run ./internal/tools/copyright -verifyOnly; then
-            echo "Required Go header(s) Missing. Please run 'make update_copyright_headers' and commit the changes."
-            exit 1
-          fi          
+        run: make check_copyright

@@ -82,6 +82,7 @@ func TestS3Driver(t *testing.T) {
 
 	// Ensure the payload was deleted
 	resp, err = s3Driver.ExistPayload(ctx, &storage.ExistRequest{Key: putResponse.Key})
+	require.NoError(t, err)
 	require.False(t, resp.Exists)
 
 	time.Sleep(1 * time.Second)
@@ -105,9 +106,9 @@ func setUp(t *testing.T) (aws.Config, func()) {
 	awsEndpoint := fmt.Sprintf("http://%s/", container.Address(localstack.APIPort))
 	awsRegion := "us-east-1"
 
-	customResolver := aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
+	customResolver := aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) { //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
 		if awsEndpoint != "" {
-			return aws.Endpoint{
+			return aws.Endpoint{ //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
 				PartitionID:   "aws",
 				URL:           awsEndpoint,
 				SigningRegion: awsRegion,
@@ -115,13 +116,13 @@ func setUp(t *testing.T) (aws.Config, func()) {
 		}
 
 		// returning EndpointNotFoundError will allow the service to fallback to its default resolution
-		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
+		return aws.Endpoint{}, &aws.EndpointNotFoundError{} //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
 	})
 
 	ctx := context.Background()
 	awsConfig, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(awsRegion),
-		config.WithEndpointResolver(customResolver),
+		config.WithEndpointResolver(customResolver), //nolint:staticcheck // tracked in https://github.com/DataDog/temporal-large-payload-codec/issues/96
 	)
 	require.NoError(t, err)
 	return awsConfig, closer
