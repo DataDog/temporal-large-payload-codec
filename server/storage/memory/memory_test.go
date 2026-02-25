@@ -76,6 +76,7 @@ func TestDriver(t *testing.T) {
 
 	// Ensure the payload was deleted
 	resp, err = d.ExistPayload(ctx, &storage.ExistRequest{Key: "sha256:test"})
+	require.NoError(t, err)
 	require.False(t, resp.Exists)
 
 }

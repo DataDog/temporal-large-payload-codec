@@ -19,7 +19,7 @@ import (
 	// github.com/golang/protobuf/proto is used intentionally over google.golang.org/protobuf/proto
 	// because go.temporal.io/api at the codec's pinned version generates legacy proto v1 types
 	// that do not implement protoreflect.ProtoMessage.
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/common/v1"
 )
@@ -138,7 +138,8 @@ func TestV2Codec(t *testing.T) {
 	s, c, _ := setUp(t, "v2")
 	defer s.Close()
 
-	for _, scenario := range testCase {
+	for i := range testCase {
+		scenario := &testCase[i]
 		t.Run(scenario.name, func(t *testing.T) {
 			actualEncodedPayload, err := c.Encode([]*common.Payload{&scenario.payload})
 			require.NoError(t, err)
@@ -321,7 +322,7 @@ func TestNewCodec(t *testing.T) {
 	require.Equal(t, 128000, client.minBytes) // 128KB
 
 	// v1
-	client, err = New(
+	_, err = New(
 		WithURL(s.URL),
 		WithHTTPClient(s.Client()),
 		WithNamespace("test"),
@@ -330,7 +331,7 @@ func TestNewCodec(t *testing.T) {
 	require.Error(t, err)
 
 	// invalid version
-	client, err = New(
+	_, err = New(
 		WithURL(s.URL),
 		WithHTTPClient(s.Client()),
 		WithNamespace("test"),
@@ -339,7 +340,7 @@ func TestNewCodec(t *testing.T) {
 	require.Error(t, err)
 
 	// without URL health check during init.
-	client, err = New(
+	_, err = New(
 		WithURL("INVALID URL"),
 		WithHTTPClient(s.Client()),
 		WithNamespace("test"),
@@ -349,7 +350,7 @@ func TestNewCodec(t *testing.T) {
 	require.NoError(t, err)
 
 	// with empty header key
-	client, err = New(
+	_, err = New(
 		WithURL(s.URL),
 		WithHTTPClient(s.Client()),
 		WithNamespace("test"),
@@ -360,7 +361,7 @@ func TestNewCodec(t *testing.T) {
 	require.Error(t, err)
 
 	// with invalid header key
-	client, err = New(
+	_, err = New(
 		WithURL(s.URL),
 		WithHTTPClient(s.Client()),
 		WithNamespace("test"),
@@ -371,7 +372,7 @@ func TestNewCodec(t *testing.T) {
 	require.Error(t, err)
 
 	// with valid customHeader
-	client, err = New(
+	_, err = New(
 		WithURL(s.URL),
 		WithHTTPClient(s.Client()),
 		WithNamespace("test"),
