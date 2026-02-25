@@ -322,21 +322,21 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	addCustomHeaders(req, c.customHeaders)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		panicOnIOError(err) //nolint: resp is nil when Do fails; panicOnIOError panics before resp.Body is accessed below
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		panicOnIOError(err)
 	}
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("server returned status code %d: %s", resp.StatusCode, respBody)
+		panicOnIOError(fmt.Errorf("server returned status code %d: %s", resp.StatusCode, respBody))
 	}
 
 	var key keyResponse
 	if err := json.Unmarshal(respBody, &key); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal put response: %w", err)
+		panicOnIOError(fmt.Errorf("unable to unmarshal put response: %w", err)) //nolint: key is zero-valued when unmarshal fails; panicOnIOError panics before key.Key is used below
 	}
 
 	result, err := converter.GetDefaultDataConverter().ToPayload(remotePayload{
@@ -408,32 +408,38 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, err
+		panicOnIOError(err) //nolint: resp is nil when Do fails; panicOnIOError panics before resp.StatusCode is accessed below
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("server returned status code %d: %s", resp.StatusCode, respBody)
+		panicOnIOError(fmt.Errorf("server returned status code %d", resp.StatusCode))
 	}
 
 	sha2 := sha256.New()
 	tee := io.TeeReader(resp.Body, sha2)
 	b, err := io.ReadAll(tee)
 	if err != nil {
-		return nil, err
+		panicOnIOError(err)
 	}
 
 	if uint(len(b)) != remoteP.Size {
-		return nil, fmt.Errorf("wanted object of size %d, got %d", remoteP.Size, len(b))
+		panicOnIOError(fmt.Errorf("wanted object of size %d, got %d", remoteP.Size, len(b)))
 	}
 
 	checkSum := hex.EncodeToString(sha2.Sum(nil))
 	if fmt.Sprintf("sha256:%s", checkSum) != remoteP.Digest {
-		return nil, fmt.Errorf("wanted object sha %s, got %s", remoteP.Digest, checkSum)
+		panicOnIOError(fmt.Errorf("wanted object sha %s, got %s", remoteP.Digest, checkSum))
 	}
 
 	return &common.Payload{
 		Metadata: remoteP.Metadata,
 		Data:     b,
 	}, nil
+}
+
+// panicOnIOError panics the codec to force the workflows to handle the error via its [go.temporal.io/sdk/worker.WorkflowPanicPolicy].
+// If the codec returns an error, we can get into non-determinism issues.
+// See https://community.temporal.io/t/panicing-within-a-dataconverter-and-or-payloadcodec/19305
+func panicOnIOError(err error) {
+	panic(fmt.Errorf("large payload codec IO error: %v", err))
 }
