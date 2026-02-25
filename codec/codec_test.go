@@ -14,9 +14,12 @@ import (
 	"github.com/DataDog/temporal-large-payload-codec/server"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
-	"go.temporal.io/api/common/v1"
-
+	// github.com/golang/protobuf/proto is used intentionally over google.golang.org/protobuf/proto
+	// because go.temporal.io/api at the codec's pinned version generates legacy proto v1 types
+	// that do not implement protoreflect.ProtoMessage.
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/require"
+	"go.temporal.io/api/common/v1"
 )
 
 const (
@@ -93,12 +96,12 @@ func TestV2Codec(t *testing.T) {
 			// load the encoded payload from file
 			scenario.encodedPayload.Data = fromFile(t)
 
-			require.Equal(t, &scenario.encodedPayload, actualEncodedPayload[0])
+			require.True(t, proto.Equal(&scenario.encodedPayload, actualEncodedPayload[0]), "encoded payloads not equal")
 
 			actualPayload, err := c.Decode([]*common.Payload{&scenario.encodedPayload})
 			require.NoError(t, err)
 
-			require.Equal(t, &scenario.payload, actualPayload[0])
+			require.True(t, proto.Equal(&scenario.payload, actualPayload[0]), "decoded payloads not equal")
 		})
 	}
 }
@@ -123,17 +126,17 @@ func Test_setting_withDecodeOnly_disables_encoding(t *testing.T) {
 	resp1, err := decodeOnlyCodec.Encode([]*common.Payload{&payload})
 	require.NoError(t, err)
 
-	require.Equal(t, &payload, resp1[0])
+	require.True(t, proto.Equal(&payload, resp1[0]), "decode-only codec should return payload unchanged")
 
 	resp2, err := defaultCodec.Encode([]*common.Payload{&payload})
 	require.NoError(t, err)
-	require.NotEqual(t, &resp1[0], resp2[0])
-	require.NotEqual(t, &payload, resp2[0])
+	require.False(t, proto.Equal(resp1[0], resp2[0]))
+	require.False(t, proto.Equal(&payload, resp2[0]))
 
 	decodedResp2, err := decodeOnlyCodec.Decode(resp2)
 	require.NoError(t, err)
 
-	require.Equal(t, &payload, decodedResp2[0])
+	require.True(t, proto.Equal(&payload, decodedResp2[0]), "decoded payload should match original")
 }
 
 func Test_the_same_payload_can_be_encoded_multiple_times(t *testing.T) {
@@ -159,7 +162,10 @@ func Test_the_same_payload_can_be_encoded_multiple_times(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	require.Equal(t, resp1, resp2)
+	require.Equal(t, len(resp1), len(resp2))
+	for i := range resp1 {
+		require.True(t, proto.Equal(resp1[i], resp2[i]), "encoded payload %d should be equal across calls", i)
+	}
 }
 
 func Test_codec_sets_custom_headers_when_sending_request_to_lps(t *testing.T) {
