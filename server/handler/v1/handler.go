@@ -141,7 +141,6 @@ func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode i
 	if err != nil {
 		_, _ = w.Write([]byte(err.Error()))
 	}
-	return
 }
 
 func (b *blobHandler) computeKey(digest string) string {

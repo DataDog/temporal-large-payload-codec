@@ -64,9 +64,7 @@ type LargePayloadActivityResponse struct {
 }
 
 func LargePayloadActivity(_ context.Context, req LargePayloadActivityRequest) (LargePayloadActivityResponse, error) {
-	return LargePayloadActivityResponse{
-		Data: req.Data,
-	}, nil
+	return LargePayloadActivityResponse(req), nil
 }
 
 func TestWorker(t *testing.T) {

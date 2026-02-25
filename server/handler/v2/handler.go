@@ -240,7 +240,6 @@ func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode i
 	if err != nil {
 		_, _ = w.Write([]byte(err.Error()))
 	}
-	return
 }
 
 func (b *blobHandler) computeKey(namespace string, dataDigest string, metadata map[string][]byte) (string, error) {
