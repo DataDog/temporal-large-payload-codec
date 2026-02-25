@@ -5,6 +5,8 @@
 package codec
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -25,6 +27,58 @@ import (
 const (
 	updateEncodedPayload = false
 )
+
+type PutRejectingDriver struct {
+	memoryDriver storage.Driver
+}
+
+func NewPutRejectingDriver() *PutRejectingDriver {
+	return &PutRejectingDriver{
+		memoryDriver: &memory.Driver{},
+	}
+}
+
+func (p *PutRejectingDriver) PutPayload(_ context.Context, _ *storage.PutRequest) (*storage.PutResponse, error) {
+	return nil, errors.New("not accepting puts")
+}
+
+func (p *PutRejectingDriver) GetPayload(ctx context.Context, request *storage.GetRequest) (*storage.GetResponse, error) {
+	return p.memoryDriver.GetPayload(ctx, request)
+}
+
+func (p *PutRejectingDriver) ExistPayload(ctx context.Context, request *storage.ExistRequest) (*storage.ExistResponse, error) {
+	return p.memoryDriver.ExistPayload(ctx, request)
+}
+
+func (p *PutRejectingDriver) DeletePayload(ctx context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
+	return p.memoryDriver.DeletePayload(ctx, request)
+}
+
+type GetRejectingDriver struct {
+	memoryDriver storage.Driver
+}
+
+func NewGetRejectingDriver() *GetRejectingDriver {
+	return &GetRejectingDriver{
+		memoryDriver: &memory.Driver{},
+	}
+}
+
+func (g *GetRejectingDriver) PutPayload(ctx context.Context, request *storage.PutRequest) (*storage.PutResponse, error) {
+	return g.memoryDriver.PutPayload(ctx, request)
+}
+
+func (g *GetRejectingDriver) GetPayload(_ context.Context, _ *storage.GetRequest) (*storage.GetResponse, error) {
+	return nil, errors.New("not accepting gets")
+}
+
+func (g *GetRejectingDriver) ExistPayload(ctx context.Context, request *storage.ExistRequest) (*storage.ExistResponse, error) {
+	return g.memoryDriver.ExistPayload(ctx, request)
+}
+
+func (g *GetRejectingDriver) DeletePayload(ctx context.Context, request *storage.DeleteRequest) (*storage.DeleteResponse, error) {
+	return g.memoryDriver.DeletePayload(ctx, request)
+}
 
 func TestV2Codec(t *testing.T) {
 	testCase := []struct {
@@ -153,14 +207,10 @@ func Test_the_same_payload_can_be_encoded_multiple_times(t *testing.T) {
 	}
 
 	resp1, err := c.Encode([]*common.Payload{&payload})
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 
 	resp2, err := c.Encode([]*common.Payload{&payload})
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 
 	require.Equal(t, len(resp1), len(resp2))
 	for i := range resp1 {
@@ -182,7 +232,14 @@ func Test_codec_sets_custom_headers_when_sending_request_to_lps(t *testing.T) {
 			require.Equal(t, values, gotValues)
 		}
 
-		w.WriteHeader(200)
+		if r.Method == http.MethodHead {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"key":"test-key"}`))
 	}))
 	defer testSrv.Close()
 
@@ -325,22 +382,74 @@ func TestNewCodec(t *testing.T) {
 		WithCustomHeader("VALID-MULTI", "VALUE_2"),
 	)
 	require.NoError(t, err)
+}
 
+func Test_io_error_in_put_panics(t *testing.T) {
+	d := NewPutRejectingDriver()
+	srv := httptest.NewServer(server.NewHttpHandler(d))
+	defer srv.Close()
+
+	c := setUpWithServer(t, "v2", srv, false)
+
+	payload := common.Payload{
+		Metadata: map[string][]byte{
+			"foo": []byte("bar"),
+		},
+		Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+	}
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		_, ok := r.(error)
+		require.True(t, ok, "expected panic value to be an error")
+	}()
+
+	_, _ = c.Encode([]*common.Payload{&payload})
+	require.Fail(t, "expected panic but none occurred")
+}
+
+func Test_io_error_in_get_panics(t *testing.T) {
+	d := NewGetRejectingDriver()
+	srv := httptest.NewServer(server.NewHttpHandler(d))
+	defer srv.Close()
+
+	c := setUpWithServer(t, "v2", srv, false)
+
+	payload := common.Payload{
+		Metadata: map[string][]byte{
+			"foo": []byte("bar"),
+		},
+		Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+	}
+
+	encodedPayloads, err := c.Encode([]*common.Payload{&payload})
+	require.NoError(t, err)
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		_, ok := r.(error)
+		require.True(t, ok, "expected panic value to be an error")
+	}()
+
+	_, _ = c.Decode(encodedPayloads)
+	require.Fail(t, "expected panic but none occurred")
 }
 
 func setUp(t *testing.T, version string) (*httptest.Server, *Codec, storage.Driver) {
-	// Create test remote codec service
 	d := &memory.Driver{}
 	s := httptest.NewServer(server.NewHttpHandler(d))
-
-	// Create test codec (to be used from Go SDK)
 	c := setUpWithServer(t, version, s, false)
 
 	return s, c, d
 }
 
 func setUpWithServer(t *testing.T, version string, server *httptest.Server, withDecodeOnly bool) *Codec {
-	// Create test remote codec service
 	opts := []Option{
 		WithURL(server.URL),
 		WithHTTPClient(server.Client()),
@@ -350,10 +459,7 @@ func setUpWithServer(t *testing.T, version string, server *httptest.Server, with
 	if withDecodeOnly {
 		opts = append(opts, WithDecodeOnly())
 	}
-	// Create test codec (to be used from Go SDK)
-	c, err := New(
-		opts...,
-	)
+	c, err := New(opts...)
 	require.NoError(t, err)
 
 	c.version = version
@@ -372,7 +478,5 @@ func fromFile(t *testing.T) []byte {
 func toFile(t *testing.T, data []byte) {
 	path := filepath.Join("testdata", t.Name())
 	err := os.WriteFile(path, data, 0644)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 }
