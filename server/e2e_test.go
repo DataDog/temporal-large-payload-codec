@@ -15,14 +15,13 @@ import (
 	"github.com/DataDog/temporal-large-payload-codec/codec"
 	"github.com/DataDog/temporal-large-payload-codec/server"
 	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
-	"go.temporal.io/api/enums/v1"
-
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/temporalite/temporaltest"
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+	"go.temporal.io/server/temporaltest"
 )
 
 const (

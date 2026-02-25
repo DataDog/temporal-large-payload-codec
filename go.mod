@@ -1,3 +1,3 @@
 module github.com/DataDog/temporal-large-payload-codec
 
-go 1.23.1
+go 1.25.6
