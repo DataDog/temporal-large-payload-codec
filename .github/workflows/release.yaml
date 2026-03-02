@@ -10,22 +10,63 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v3
-        with:
-          go-version-file: 'go.mod'
-          check-latest: true
+      - name: Generate release notes
+        id: notes
+        run: |
+          TAG="${GITHUB_REF_NAME}"
 
-      - uses: goreleaser/goreleaser-action@v4
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release
+          if [[ "$TAG" == codec/* ]]; then
+            DIR="codec"
+            PREFIX="codec"
+          elif [[ "$TAG" == server/* ]]; then
+            DIR="server"
+            PREFIX="server"
+          else
+            echo "Skipping non-module tag: $TAG"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PREV_TAG=$(git tag --sort=-version:refname | grep "^${PREFIX}/" | grep -v "^${TAG}$" | head -1)
+          RANGE="${PREV_TAG:+${PREV_TAG}..}${TAG}"
+
+          log_section() {
+            local title="$1" pattern="$2"
+            local commits
+            commits=$(git log "$RANGE" --oneline -- "$DIR/" \
+              | grep -vE "Merge (pull request|remote-tracking branch|branch)" \
+              | grep -E "$pattern" || true)
+            if [[ -n "$commits" ]]; then
+              printf "## %s\n%s\n\n" "$title" "$commits"
+            fi
+          }
+
+          {
+            log_section "New Features"          "feat(\([^)]+\))?!?:"
+            log_section "Bug Fixes"             "fix(\([^)]+\))?!?:"
+            log_section "Documentation Updates" "doc(\([^)]+\))?!?:"
+            other=$(git log "$RANGE" --oneline -- "$DIR/" \
+              | grep -vE "Merge (pull request|remote-tracking branch|branch)" \
+              | grep -vE "(feat|fix|doc)(\([^)]+\))?!?:" || true)
+            if [[ -n "$other" ]]; then
+              printf "## Other Work\n%s\n" "$other"
+            fi
+          } > release_notes.txt
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: steps.notes.outputs.skip != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file release_notes.txt

@@ -94,11 +94,11 @@ The release process is automated via [ncipollo/release-action@v1.14.0](https://g
 To cut a release create a tag locally and push it to GitHub. the tag has the following format : `<MODULE>/<VERSION>` whith module being either `server` or `codec` depending on what you want to
 release and version being a valid [semantic version](https://semver.org/), prefixed with 'v', eg _codec/v1.0.0_.
 
-To release v1.0.0 you would run:
+To release v1.0.0 of the server module you would run:
 
 ```shell
 ```sh
-git tag -a v1.0.0
+git tag -a server/v1.0.0
 git push --tags origin HEAD
 ```
 
