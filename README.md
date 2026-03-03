@@ -77,6 +77,14 @@ func main() {
 On the Temporal side, you need to create the Large Payload Server `PayloadCodec`, wrap it in a `CodecDataConverter` and pass it to the Temporal client contructor (simplified, without error handling):
 
 ```golang
+import (
+	"os"
+
+	"go.temporal.io/sdk/converter"
+	largepayloadcodec "github.com/DataDog/temporal-large-payload-codec/codec"
+)
+
+...
 opts := client.Options{
 ...
 }
