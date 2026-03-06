@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/google/go-licenses/licenses"
-	"github.com/google/licenseclassifier"
+	"github.com/google/licenseclassifier/v2"
 )
 
 const (
