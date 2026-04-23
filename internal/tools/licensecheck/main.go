@@ -15,7 +15,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/go-licenses/licenses"
+	"github.com/google/go-licenses/v2/licenses"
 	"github.com/google/licenseclassifier"
 )
 
