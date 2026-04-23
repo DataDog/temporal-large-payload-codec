@@ -5,11 +5,11 @@ go 1.25.6
 replace github.com/DataDog/temporal-large-payload-codec/server => ../server
 
 require (
-	github.com/DataDog/temporal-large-payload-codec/server v1.3.0
+	github.com/DataDog/temporal-large-payload-codec/server v1.3.1
 	github.com/golang/protobuf v1.5.4
 	github.com/stretchr/testify v1.11.1
-	go.temporal.io/api v1.46.0
-	go.temporal.io/sdk v1.33.0
+	go.temporal.io/api v1.62.9
+	go.temporal.io/sdk v1.42.0
 )
 
 require (
@@ -22,8 +22,7 @@ require (
 	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260223185530-2f722ef697dc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260223185530-2f722ef697dc // indirect
-	google.golang.org/grpc v1.79.1 // indirect
+	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
