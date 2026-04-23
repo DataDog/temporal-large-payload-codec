@@ -2,6 +2,8 @@ module github.com/DataDog/temporal-large-payload-codec/internal
 
 go 1.23.1
 
+toolchain go1.26.2
+
 require (
 	github.com/google/go-licenses v1.6.0
 	github.com/google/licenseclassifier v0.0.0-20210722185704-3043a050f148
