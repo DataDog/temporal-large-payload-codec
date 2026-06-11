@@ -88,6 +88,26 @@ opts.DataConverter = converter.NewCodecDataConverter(opts.DataConverter, lpc)
 temporalClient, _ := router.NewClient(opts)
 ```
 
+### Handling IO errors
+
+By default the codec panics on an IO error (a failed request, a bad status code, or a
+checksum/size mismatch), so that a Temporal worker's `WorkflowPanicPolicy` can retry the
+workflow task without risking non-determinism. See [this Temporal community
+thread](https://community.temporal.io/t/panicing-within-a-dataconverter-and-or-payloadcodec/19305)
+for why panicking is the safe default inside workflow code.
+
+Outside a Temporal worker — an API handler, a CLI, or a goroutine the Temporal SDK does not
+manage — there is no such safety net, and an uncaught panic crashes the process. Pass
+`WithoutPanicOnIOError()` when constructing the codec for one of those callers so it returns
+a `*largepayloadcodec.IOError` instead:
+
+```golang
+lpc, _ := largepayloadcodec.New(
+    largepayloadcodec.WithURL(lpsEndpoint),
+    largepayloadcodec.WithoutPanicOnIOError(),
+)
+```
+
 ## Architecture
 
 Architecturally, large payloads are passed through the `CodecDataConverter` which in turn uses the large payload codec to en- and decode the payloads.
