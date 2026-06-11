@@ -412,6 +412,25 @@ func Test_io_error_in_put_panics(t *testing.T) {
 	require.Fail(t, "expected panic but none occurred")
 }
 
+func Test_io_error_in_put_returns_error_with_option(t *testing.T) {
+	d := NewPutRejectingDriver()
+	srv := httptest.NewServer(server.NewHttpHandler(d))
+	defer srv.Close()
+
+	c := setUpWithOptions(t, "v2", srv, WithReturnErrorOnIOError())
+
+	payload := common.Payload{
+		Metadata: map[string][]byte{
+			"foo": []byte("bar"),
+		},
+		Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+	}
+
+	_, err := c.Encode([]*common.Payload{&payload})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "large payload codec IO error")
+}
+
 func Test_io_error_in_get_panics(t *testing.T) {
 	d := NewGetRejectingDriver()
 	srv := httptest.NewServer(server.NewHttpHandler(d))
@@ -442,6 +461,36 @@ func Test_io_error_in_get_panics(t *testing.T) {
 	require.Fail(t, "expected panic but none occurred")
 }
 
+func Test_io_error_in_get_returns_error_with_option(t *testing.T) {
+	d := &memory.Driver{}
+	srv := httptest.NewServer(server.NewHttpHandler(d))
+	defer srv.Close()
+
+	// Encode with a normal codec so the payload is stored, then decode with
+	// a WithReturnErrorOnIOError codec backed by a driver that rejects gets.
+	encoder := setUpWithServer(t, "v2", srv, false)
+
+	rejectingDriver := NewGetRejectingDriver()
+	rejectingDriver.memoryDriver = d
+	rejectingSrv := httptest.NewServer(server.NewHttpHandler(rejectingDriver))
+	defer rejectingSrv.Close()
+	decoder := setUpWithOptions(t, "v2", rejectingSrv, WithReturnErrorOnIOError())
+
+	payload := common.Payload{
+		Metadata: map[string][]byte{
+			"foo": []byte("bar"),
+		},
+		Data: []byte("this is a longer message blah blah blah blah blah blah blah"),
+	}
+
+	encodedPayloads, err := encoder.Encode([]*common.Payload{&payload})
+	require.NoError(t, err)
+
+	_, err = decoder.Decode(encodedPayloads)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "large payload codec IO error")
+}
+
 func setUp(t *testing.T, version string) (*httptest.Server, *Codec, storage.Driver) {
 	d := &memory.Driver{}
 	s := httptest.NewServer(server.NewHttpHandler(d))
@@ -460,6 +509,22 @@ func setUpWithServer(t *testing.T, version string, server *httptest.Server, with
 	if withDecodeOnly {
 		opts = append(opts, WithDecodeOnly())
 	}
+	c, err := New(opts...)
+	require.NoError(t, err)
+
+	c.version = version
+
+	return c
+}
+
+func setUpWithOptions(t *testing.T, version string, server *httptest.Server, extra ...Option) *Codec {
+	opts := []Option{
+		WithURL(server.URL),
+		WithHTTPClient(server.Client()),
+		WithNamespace("test"),
+		WithMinBytes(32),
+	}
+	opts = append(opts, extra...)
 	c, err := New(opts...)
 	require.NoError(t, err)
 
