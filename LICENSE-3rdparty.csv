@@ -1,5 +1,5 @@
 Component,Origin,License,Copyright
-cel.dev/expr,https://github.com/google/cel-spec,Apache-2.0,
+cel.dev/expr,https://github.com/cel-expr/cel-spec,Apache-2.0,
 cloud.google.com/go/auth,https://github.com/googleapis/google-cloud-go,Apache-2.0,
 cloud.google.com/go/auth/oauth2adapt,https://github.com/googleapis/google-cloud-go,Apache-2.0,
 cloud.google.com/go/compute/metadata,https://github.com/googleapis/google-cloud-go,Apache-2.0,
@@ -83,14 +83,14 @@ go.opentelemetry.io/otel/trace,https://github.com/open-telemetry/opentelemetry-g
 go.temporal.io/api,https://github.com/temporalio/api-go,MIT,Temporal Technologies Inc.
 go.temporal.io/api/internal/protojson,https://github.com/temporalio/api-go,BSD-3-Clause,The Go Authors
 go.temporal.io/sdk/converter,https://github.com/temporalio/sdk-go,MIT,Temporal Technologies Inc.
-golang.org/x/crypto,https://cs.opensource.google/go/x/crypto/+/v0.48.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/mod/semver,https://cs.opensource.google/go/x/mod/+/v0.32.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/net,https://cs.opensource.google/go/x/net/+/v0.50.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/crypto,https://cs.opensource.google/go/x/crypto/+/v0.56.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/mod/semver,https://cs.opensource.google/go/x/mod/+/v0.40.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/net,https://cs.opensource.google/go/x/net/+/v0.58.0:LICENSE,BSD-3-Clause,The Go Authors
 golang.org/x/oauth2,https://cs.opensource.google/go/x/oauth2/+/v0.35.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/sync,https://cs.opensource.google/go/x/sync/+/v0.19.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/text,https://cs.opensource.google/go/x/text/+/v0.34.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/sync,https://cs.opensource.google/go/x/sync/+/v0.22.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/text,https://cs.opensource.google/go/x/text/+/v0.41.0:LICENSE,BSD-3-Clause,The Go Authors
 golang.org/x/time/rate,https://cs.opensource.google/go/x/time/+/v0.14.0:LICENSE,BSD-3-Clause,The Go Authors
-golang.org/x/tools,https://cs.opensource.google/go/x/tools/+/v0.41.0:LICENSE,BSD-3-Clause,The Go Authors
+golang.org/x/tools,https://cs.opensource.google/go/x/tools/+/v0.49.0:LICENSE,BSD-3-Clause,The Go Authors
 google.golang.org/api,https://github.com/googleapis/google-api-go-client,BSD-3-Clause,Google Inc.
 google.golang.org/api/internal/third_party/uritemplates,https://github.com/googleapis/google-api-go-client,BSD-3-Clause,Joshua Tacoma
 google.golang.org/genproto/googleapis/api,https://github.com/googleapis/go-genproto,Apache-2.0,
