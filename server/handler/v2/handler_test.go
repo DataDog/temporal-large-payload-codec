@@ -5,10 +5,74 @@
 package v2
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"testing"
 
+	"github.com/DataDog/temporal-large-payload-codec/server/logging"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage"
+	"github.com/DataDog/temporal-large-payload-codec/server/storage/memory"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+type trackingReadCloser struct {
+	reader io.Reader
+	read   int
+}
+
+func (r *trackingReadCloser) Read(p []byte) (int, error) {
+	n, err := r.reader.Read(p)
+	r.read += n
+	return n, err
+}
+
+func (r *trackingReadCloser) Close() error {
+	return nil
+}
+
+func Test_putBlobDeduplicatedRequestDrainsBody(t *testing.T) {
+	payload := bytes.Repeat([]byte("payload"), 256*1024)
+	digestBytes := sha256.Sum256(payload)
+	digest := "sha256:" + hex.EncodeToString(digestBytes[:])
+	metadata := map[string][]byte{}
+	metadataJSON, err := json.Marshal(metadata)
+	require.NoError(t, err)
+	metadataHeader := base64.StdEncoding.EncodeToString(metadataJSON)
+
+	handler := blobHandler{}
+	key, err := handler.computeKey("test", digest, metadata)
+	require.NoError(t, err)
+
+	driver := &memory.Driver{}
+	_, err = driver.PutPayload(t.Context(), &storage.PutRequest{
+		Data:          bytes.NewReader(payload),
+		Key:           key,
+		Digest:        digest,
+		ContentLength: uint64(len(payload)),
+	})
+	require.NoError(t, err)
+
+	body := &trackingReadCloser{reader: bytes.NewReader(payload)}
+	request := httptest.NewRequest(http.MethodPut, "/v2/blobs/put?namespace=test&digest="+digest, body)
+	request.Body = body
+	request.Header.Set("Content-Type", "application/octet-stream")
+	request.Header.Set("Content-Length", strconv.Itoa(len(payload)))
+	request.Header.Set("X-Temporal-Metadata", metadataHeader)
+	response := httptest.NewRecorder()
+
+	NewHandler(driver, logging.NewNoopLogger()).ServeHTTP(response, request)
+
+	assert.Equal(t, http.StatusOK, response.Code)
+	assert.Equal(t, len(payload), body.read)
+}
 
 func Test_computeKey(t *testing.T) {
 	h := blobHandler{}

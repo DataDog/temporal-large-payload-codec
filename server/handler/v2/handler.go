@@ -170,6 +170,10 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if existResponse.Exists {
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
+			b.handleError(w, err, http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		r := storage.PutResponse{
 			Key: key,
