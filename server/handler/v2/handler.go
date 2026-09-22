@@ -134,6 +134,10 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Keep r.Body unchanged so net/http can recognize its concrete type when an
+	// earlier validation error returns without consuming the request body.
+	body := http.MaxBytesReader(w, r.Body, int64(contentLength))
+
 	namespaceParam := r.URL.Query().Get("namespace")
 	if namespaceParam == "" {
 		b.handleError(w, errors.New("namespace query parameter is required"), http.StatusBadRequest)
@@ -170,8 +174,13 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if existResponse.Exists {
-		if _, err := io.Copy(io.Discard, r.Body); err != nil {
-			b.handleError(w, err, http.StatusInternalServerError)
+		n, err := io.Copy(io.Discard, body)
+		if err != nil {
+			b.handleBodyReadError(w, err)
+			return
+		}
+		if uint64(n) != contentLength {
+			b.handleError(w, fmt.Errorf("request body length does not match Content-Length: expected %d bytes, got %d", contentLength, n), http.StatusBadRequest)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -184,7 +193,7 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tee := io.TeeReader(r.Body, hasher)
+	tee := io.TeeReader(body, hasher)
 	result, err := b.driver.PutPayload(r.Context(), &storage.PutRequest{
 		Data:          tee,
 		Key:           key,
@@ -192,7 +201,7 @@ func (b *blobHandler) putBlob(w http.ResponseWriter, r *http.Request) {
 		ContentLength: contentLength,
 	})
 	if err != nil {
-		b.handleError(w, err, http.StatusInternalServerError)
+		b.handleBodyReadError(w, err)
 		return
 	}
 
@@ -234,6 +243,15 @@ func (b *blobHandler) digestAndHash(digest string) (string, hash.Hash, error) {
 		return "", nil, fmt.Errorf("invalid hash type '%s'", tokens[0])
 	}
 	return tokens[1], h, nil
+}
+
+func (b *blobHandler) handleBodyReadError(w http.ResponseWriter, err error) {
+	statusCode := http.StatusInternalServerError
+	var maxBytesError *http.MaxBytesError
+	if errors.As(err, &maxBytesError) {
+		statusCode = http.StatusRequestEntityTooLarge
+	}
+	b.handleError(w, err, statusCode)
 }
 
 func (b *blobHandler) handleError(w http.ResponseWriter, err error, statusCode int) {

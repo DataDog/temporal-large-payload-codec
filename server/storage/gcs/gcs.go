@@ -62,8 +62,8 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 	// Upload an object with storage.Writer.
 	wc := o.NewWriter(ctx)
 
-	if _, err := io.Copy(wc, r.Data); err != nil {
-		return nil, fmt.Errorf("io.Copy: %v", err)
+	if err := copyPayload(wc, r.Data); err != nil {
+		return nil, err
 	}
 	if err := wc.Close(); err != nil {
 		return nil, fmt.Errorf("Writer.Close: %v", err)
@@ -71,6 +71,13 @@ func (d *Driver) PutPayload(ctx context.Context, r *storage.PutRequest) (*storag
 	return &storage.PutResponse{
 		Key: r.Key,
 	}, nil
+}
+
+func copyPayload(dst io.Writer, src io.Reader) error {
+	if _, err := io.Copy(dst, src); err != nil {
+		return fmt.Errorf("io.Copy: %w", err)
+	}
+	return nil
 }
 
 func (d *Driver) ExistPayload(ctx context.Context, r *storage.ExistRequest) (*storage.ExistResponse, error) {
