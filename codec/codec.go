@@ -43,6 +43,10 @@ type Codec struct {
 	skipUrlHealthCheck bool
 	// disableEncoding when set to true encoding will be disabled.
 	disableEncoding bool
+	// returnErrorOnIOError when set to true, IO errors will be returned as errors instead of panicking.
+	// Use this when the codec is used outside of a Temporal worker context (e.g. in an API handler or
+	// a goroutine not managed by the Temporal SDK), where panics are not caught and would crash the process.
+	returnErrorOnIOError bool
 	// customHeaders http headers to add the request sent to LargePayloadService
 	customHeaders map[string][]string
 }
@@ -164,6 +168,22 @@ func WithoutUrlHealthCheck() Option {
 func WithDecodeOnly() Option {
 	return applier(func(c *Codec) error {
 		c.disableEncoding = true
+		return nil
+	})
+}
+
+// WithReturnErrorOnIOError configures the codec to return errors instead of panicking on IO errors.
+//
+// By default the codec panics on IO errors so that the Temporal worker's WorkflowPanicPolicy
+// handles them, avoiding non-determinism issues inside workflow functions.
+//
+// Use this option when the codec is used outside of a Temporal worker context — for example
+// in an API handler, a client-side goroutine, or an activity that fetches a prior workflow
+// result via client.GetWorkflow(...).Get(...). In those contexts the Temporal SDK does not
+// catch panics, so an IO error would crash the process rather than failing a single task.
+func WithReturnErrorOnIOError() Option {
+	return applier(func(c *Codec) error {
+		c.returnErrorOnIOError = true
 		return nil
 	})
 }
@@ -324,21 +344,21 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	addCustomHeaders(req, c.customHeaders)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		panicOnIOError(err) // resp is nil when Do fails; panicOnIOError panics before resp.Body is accessed below
+		return nil, c.ioError(err) // resp is nil when Do fails; ioError panics/errors before resp.Body is accessed below
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panicOnIOError(err)
+		return nil, c.ioError(err)
 	}
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		panicOnIOError(fmt.Errorf("server returned status code %d: %s", resp.StatusCode, respBody))
+		return nil, c.ioError(fmt.Errorf("server returned status code %d: %s", resp.StatusCode, respBody))
 	}
 
 	var key keyResponse
 	if err := json.Unmarshal(respBody, &key); err != nil {
-		panicOnIOError(fmt.Errorf("unable to unmarshal put response: %w", err)) // key is zero-valued when unmarshal fails; panicOnIOError panics before key.Key is used below
+		return nil, c.ioError(fmt.Errorf("unable to unmarshal put response: %w", err)) // key is zero-valued when unmarshal fails; ioError panics/errors before key.Key is used below
 	}
 
 	result, err := converter.GetDefaultDataConverter().ToPayload(remotePayload{
@@ -410,27 +430,27 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		panicOnIOError(err) // resp is nil when Do fails; panicOnIOError panics before resp.StatusCode is accessed below
+		return nil, c.ioError(err) // resp is nil when Do fails; ioError panics/errors before resp.StatusCode is accessed below
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		panicOnIOError(fmt.Errorf("server returned status code %d", resp.StatusCode))
+		return nil, c.ioError(fmt.Errorf("server returned status code %d", resp.StatusCode))
 	}
 
 	sha2 := sha256.New()
 	tee := io.TeeReader(resp.Body, sha2)
 	b, err := io.ReadAll(tee)
 	if err != nil {
-		panicOnIOError(err)
+		return nil, c.ioError(err)
 	}
 
 	if uint(len(b)) != remoteP.Size {
-		panicOnIOError(fmt.Errorf("wanted object of size %d, got %d", remoteP.Size, len(b)))
+		return nil, c.ioError(fmt.Errorf("wanted object of size %d, got %d", remoteP.Size, len(b)))
 	}
 
 	checkSum := hex.EncodeToString(sha2.Sum(nil))
 	if fmt.Sprintf("sha256:%s", checkSum) != remoteP.Digest {
-		panicOnIOError(fmt.Errorf("wanted object sha %s, got %s", remoteP.Digest, checkSum))
+		return nil, c.ioError(fmt.Errorf("wanted object sha %s, got %s", remoteP.Digest, checkSum))
 	}
 
 	return &common.Payload{
@@ -439,9 +459,18 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 	}, nil
 }
 
-// panicOnIOError panics the codec to force the workflows to handle the error via its [go.temporal.io/sdk/worker.WorkflowPanicPolicy].
-// If the codec returns an error, we can get into non-determinism issues.
+// ioError handles an IO error according to the codec's configuration.
+//
+// By default it panics so that the Temporal worker's WorkflowPanicPolicy handles it,
+// avoiding non-determinism issues inside workflow functions.
 // See https://community.temporal.io/t/panicing-within-a-dataconverter-and-or-payloadcodec/19305
-func panicOnIOError(err error) {
-	panic(fmt.Errorf("large payload codec IO error: %v", err))
+//
+// When WithReturnErrorOnIOError is set it returns the error instead, which is safe for
+// callers outside a Temporal worker context.
+func (c *Codec) ioError(err error) error {
+	wrapped := fmt.Errorf("large payload codec IO error: %v", err)
+	if c.returnErrorOnIOError {
+		return wrapped
+	}
+	panic(wrapped)
 }
