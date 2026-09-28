@@ -1,6 +1,6 @@
 module github.com/DataDog/temporal-large-payload-codec/internal
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/google/go-licenses v1.6.0
@@ -25,11 +25,11 @@ require (
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/xanzy/ssh-agent v0.2.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/src-d/go-billy.v4 v4.3.2 // indirect
