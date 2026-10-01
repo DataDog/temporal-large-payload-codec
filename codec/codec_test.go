@@ -7,10 +7,12 @@ package codec
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/DataDog/temporal-large-payload-codec/server"
@@ -22,6 +24,7 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/sdk/converter"
 )
 
 const (
@@ -404,8 +407,8 @@ func Test_io_error_in_put_panics(t *testing.T) {
 		if r == nil {
 			return
 		}
-		_, ok := r.(error)
-		require.True(t, ok, "expected panic value to be an error")
+		_, ok := r.(*IOError)
+		require.True(t, ok, "expected panic value to be a *IOError")
 	}()
 
 	_, _ = c.Encode([]*common.Payload{&payload})
@@ -417,7 +420,7 @@ func Test_io_error_in_put_returns_error_with_option(t *testing.T) {
 	srv := httptest.NewServer(server.NewHttpHandler(d))
 	defer srv.Close()
 
-	c := setUpWithOptions(t, "v2", srv, WithReturnErrorOnIOError())
+	c := setUpWithOptions(t, "v2", srv, WithoutPanicOnIOError())
 
 	payload := common.Payload{
 		Metadata: map[string][]byte{
@@ -427,7 +430,8 @@ func Test_io_error_in_put_returns_error_with_option(t *testing.T) {
 	}
 
 	_, err := c.Encode([]*common.Payload{&payload})
-	require.Error(t, err)
+	var ioErr *IOError
+	require.ErrorAs(t, err, &ioErr)
 	require.Contains(t, err.Error(), "large payload codec IO error")
 }
 
@@ -453,8 +457,8 @@ func Test_io_error_in_get_panics(t *testing.T) {
 		if r == nil {
 			return
 		}
-		_, ok := r.(error)
-		require.True(t, ok, "expected panic value to be an error")
+		_, ok := r.(*IOError)
+		require.True(t, ok, "expected panic value to be a *IOError")
 	}()
 
 	_, _ = c.Decode(encodedPayloads)
@@ -467,14 +471,14 @@ func Test_io_error_in_get_returns_error_with_option(t *testing.T) {
 	defer srv.Close()
 
 	// Encode with a normal codec so the payload is stored, then decode with
-	// a WithReturnErrorOnIOError codec backed by a driver that rejects gets.
+	// a WithoutPanicOnIOError codec backed by a driver that rejects gets.
 	encoder := setUpWithServer(t, "v2", srv, false)
 
 	rejectingDriver := NewGetRejectingDriver()
 	rejectingDriver.memoryDriver = d
 	rejectingSrv := httptest.NewServer(server.NewHttpHandler(rejectingDriver))
 	defer rejectingSrv.Close()
-	decoder := setUpWithOptions(t, "v2", rejectingSrv, WithReturnErrorOnIOError())
+	decoder := setUpWithOptions(t, "v2", rejectingSrv, WithoutPanicOnIOError())
 
 	payload := common.Payload{
 		Metadata: map[string][]byte{
@@ -487,7 +491,8 @@ func Test_io_error_in_get_returns_error_with_option(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = decoder.Decode(encodedPayloads)
-	require.Error(t, err)
+	var ioErr *IOError
+	require.ErrorAs(t, err, &ioErr)
 	require.Contains(t, err.Error(), "large payload codec IO error")
 }
 
@@ -497,6 +502,77 @@ func setUp(t *testing.T, version string) (*httptest.Server, *Codec, storage.Driv
 	c := setUpWithServer(t, version, s, false)
 
 	return s, c, d
+}
+
+// closeTrackingBody wraps a response body to record whether Close was called.
+type closeTrackingBody struct {
+	io.ReadCloser
+	closed *bool
+}
+
+func (b *closeTrackingBody) Close() error {
+	*b.closed = true
+	return b.ReadCloser.Close()
+}
+
+// rejectingTransport answers every request with a fixed error response, never making a real
+// connection. Unlike an httptest.Server, nothing but the codec's own code can read or close
+// the response body: a real net/http.Transport closes idle response bodies on its own in the
+// background, which would let a test pass even if the codec itself never did.
+type rejectingTransport struct {
+	closed *bool
+}
+
+func (t *rejectingTransport) RoundTrip(_ *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusInternalServerError,
+		Header:     make(http.Header),
+		Body:       &closeTrackingBody{ReadCloser: io.NopCloser(strings.NewReader("rejected")), closed: t.closed},
+	}, nil
+}
+
+func Test_io_error_closes_response_body(t *testing.T) {
+	payload := common.Payload{
+		Metadata: map[string][]byte{"foo": []byte("bar")},
+		Data:     []byte("this is a longer message blah blah blah blah blah blah blah"),
+	}
+
+	newRejectingCodec := func(t *testing.T, closed *bool) *Codec {
+		c, err := New(
+			WithURL("http://lps.invalid"),
+			WithNamespace("test"),
+			WithMinBytes(32),
+			WithoutUrlHealthCheck(),
+			WithoutPanicOnIOError(),
+			// An isolated client: WithHTTPRoundTripper mutates whatever client is
+			// already set, which defaults to the shared http.DefaultClient.
+			WithHTTPClient(&http.Client{}),
+			WithHTTPRoundTripper(&rejectingTransport{closed: closed}),
+		)
+		require.NoError(t, err)
+		c.version = "v2"
+		return c
+	}
+
+	t.Run("put", func(t *testing.T) {
+		closed := false
+		_, err := newRejectingCodec(t, &closed).Encode([]*common.Payload{&payload})
+		require.Error(t, err)
+		require.True(t, closed, "expected the response body to be closed on an IO error")
+	})
+
+	t.Run("get", func(t *testing.T) {
+		closed := false
+		// A well-formed v2 reference is enough: decodePayload fails on the GET's status code,
+		// before it would ever need the referenced key to actually exist.
+		ref, err := converter.GetDefaultDataConverter().ToPayload(remotePayload{Key: "ignored", Digest: "sha256:ignored", Size: 1})
+		require.NoError(t, err)
+		ref.Metadata[remoteCodecName] = []byte("v2")
+
+		_, err = newRejectingCodec(t, &closed).Decode([]*common.Payload{ref})
+		require.Error(t, err)
+		require.True(t, closed, "expected the response body to be closed on an IO error")
+	})
 }
 
 func setUpWithServer(t *testing.T, version string, server *httptest.Server, withDecodeOnly bool) *Codec {

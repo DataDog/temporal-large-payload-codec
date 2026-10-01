@@ -43,10 +43,10 @@ type Codec struct {
 	skipUrlHealthCheck bool
 	// disableEncoding when set to true encoding will be disabled.
 	disableEncoding bool
-	// returnErrorOnIOError when set to true, IO errors will be returned as errors instead of panicking.
+	// panicOnIOErrorDisabled when set to true, IO errors are returned as *IOError instead of panicking.
 	// Use this when the codec is used outside of a Temporal worker context (e.g. in an API handler or
 	// a goroutine not managed by the Temporal SDK), where panics are not caught and would crash the process.
-	returnErrorOnIOError bool
+	panicOnIOErrorDisabled bool
 	// customHeaders http headers to add the request sent to LargePayloadService
 	customHeaders map[string][]string
 }
@@ -172,18 +172,21 @@ func WithDecodeOnly() Option {
 	})
 }
 
-// WithReturnErrorOnIOError configures the codec to return errors instead of panicking on IO errors.
+// WithoutPanicOnIOError configures the codec to return an *IOError instead of panicking on IO errors.
 //
 // By default the codec panics on IO errors so that the Temporal worker's WorkflowPanicPolicy
 // handles them, avoiding non-determinism issues inside workflow functions.
 //
 // Use this option when the codec is used outside of a Temporal worker context — for example
-// in an API handler, a client-side goroutine, or an activity that fetches a prior workflow
-// result via client.GetWorkflow(...).Get(...). In those contexts the Temporal SDK does not
-// catch panics, so an IO error would crash the process rather than failing a single task.
-func WithReturnErrorOnIOError() Option {
+// in an API handler, a standalone client, or a goroutine the Temporal SDK does not manage (such
+// as one spawned from an activity to call client.GetWorkflow(...).Get() in the background).
+// Nothing catches a panic in those cases, so an IO error would crash the process. This is not
+// needed for activity code itself: the SDK already recovers an activity's own panic into a
+// retryable error, though returning this instead keeps that error's cause inspectable via
+// errors.As.
+func WithoutPanicOnIOError() Option {
 	return applier(func(c *Codec) error {
-		c.returnErrorOnIOError = true
+		c.panicOnIOErrorDisabled = true
 		return nil
 	})
 }
@@ -279,6 +282,7 @@ func New(opts ...Option) (*Codec, error) {
 		if err != nil {
 			return nil, err
 		}
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("got status code %d from storage service at %s", resp.StatusCode, headURL)
 		}
@@ -346,6 +350,7 @@ func (c *Codec) encodePayload(ctx context.Context, payload *common.Payload) (*co
 	if err != nil {
 		return nil, c.ioError(err) // resp is nil when Do fails; ioError panics/errors before resp.Body is accessed below
 	}
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -432,6 +437,7 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 	if err != nil {
 		return nil, c.ioError(err) // resp is nil when Do fails; ioError panics/errors before resp.StatusCode is accessed below
 	}
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, c.ioError(fmt.Errorf("server returned status code %d", resp.StatusCode))
@@ -459,17 +465,27 @@ func (c *Codec) decodePayload(ctx context.Context, payload *common.Payload, vers
 	}, nil
 }
 
-// ioError handles an IO error according to the codec's configuration.
-//
-// By default it panics so that the Temporal worker's WorkflowPanicPolicy handles it,
-// avoiding non-determinism issues inside workflow functions.
-// See https://community.temporal.io/t/panicing-within-a-dataconverter-and-or-payloadcodec/19305
-//
-// When WithReturnErrorOnIOError is set it returns the error instead, which is safe for
-// callers outside a Temporal worker context.
+// IOError wraps a transport, HTTP-status, or integrity failure from the LPS server.
+// Use errors.As to recover the cause.
+type IOError struct {
+	Cause error
+}
+
+func (e *IOError) Error() string {
+	return fmt.Sprintf("large payload codec IO error: %v", e.Cause)
+}
+
+func (e *IOError) Unwrap() error {
+	return e.Cause
+}
+
+// ioError panics by default so the Temporal worker's WorkflowPanicPolicy can handle it without
+// workflow non-determinism (see
+// https://community.temporal.io/t/panicing-within-a-dataconverter-and-or-payloadcodec/19305).
+// WithoutPanicOnIOError returns the *IOError instead.
 func (c *Codec) ioError(err error) error {
-	wrapped := fmt.Errorf("large payload codec IO error: %v", err)
-	if c.returnErrorOnIOError {
+	wrapped := &IOError{Cause: err}
+	if c.panicOnIOErrorDisabled {
 		return wrapped
 	}
 	panic(wrapped)
